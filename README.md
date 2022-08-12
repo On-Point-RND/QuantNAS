@@ -1,6 +1,3 @@
-## code for the paper "QuantNAS for super resolution: searching for efficient quantization-friendly architectures against quantization noise.
-
-
 ### Full precision NAS VS Joint quantization:
 To search with different bit widths set desired bit widths in "configs/quant_config.yaml" <br>
 <br>
