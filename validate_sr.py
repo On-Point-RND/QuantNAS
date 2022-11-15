@@ -19,7 +19,7 @@ def get_model(
     channels=3,
     scale=4,
     body_cells=4,
-    skip_mode=True
+    skip_mode=False
 ):
     model = AugmentCNN(
         channels,
@@ -50,7 +50,7 @@ def run_val(model, cfg_val, save_dir, device):
         pin_memory=False,
     )
 
-    score_val = validate(val_loader, model, device, save_dir)
+    ssim, score_val = validate(val_loader, model, device, save_dir)
     random_image = torch.randn(1, 3, 32, 32).cuda(device)
     _ = model(random_image)
     flops_32, _ = model.fetch_info()
@@ -60,11 +60,12 @@ def run_val(model, cfg_val, save_dir, device):
     flops_256, _ = model.fetch_info()
 
     mb_params = utils.param_size(model)
-    return score_val, flops_32, flops_256, mb_params
+    return ssim, score_val, flops_32, flops_256, mb_params
 
 
 def validate(valid_loader, model, device, save_dir):
     psnr_meter = utils.AverageMeter()
+    ssim_meter = utils.AverageMeter()
 
     model.eval()
 
@@ -81,7 +82,9 @@ def validate(valid_loader, model, device, save_dir):
             preds = model(X).clamp(0.0, 1.0)
 
             psnr = utils.compute_psnr(preds, y)
+            ssim = utils.compute_ssim(preds, y)
             psnr_meter.update(psnr, N)
+            ssim_meter.update(ssim, N)
 
     indx = random.randint(0, len(x_path) - 1)
     utils.save_images(
@@ -93,14 +96,14 @@ def validate(valid_loader, model, device, save_dir):
         logger=None,
     )
 
-    return psnr_meter.avg
+    return ssim_meter.avg, psnr_meter.avg
 
 
 def dataset_loop(valid_cfg, model, logger, save_dir, device):
-    df = pd.DataFrame(columns=["Model size", "BitOps(32x32)", "BitOps(256x256)", "PSNR"])
+    df = pd.DataFrame(columns=["Model size", "BitOps(32x32)", "BitOps(256x256)", "PSNR", "SSIM"])
     for dataset in valid_cfg:
         os.makedirs(os.path.join(save_dir, str(dataset)), exist_ok=True)
-        score_val, flops_32, flops_256, mb_params = run_val(
+        ssim, score_val, flops_32, flops_256, mb_params = run_val(
             model,
             valid_cfg[dataset],
             os.path.join(save_dir, str(dataset)),
@@ -111,7 +114,7 @@ def dataset_loop(valid_cfg, model, logger, save_dir, device):
         logger.info("BitOps = {:.2e} operations 32x32".format(flops_32))
         logger.info("BitOps = {:.2e} operations 256x256".format(flops_256))
         logger.info("PSNR = {:.3f}%".format(score_val))
-        df.loc[str(dataset)] = [mb_params, flops_32, flops_256, score_val]
+        df.loc[str(dataset)] = [mb_params, flops_32, flops_256, score_val, ssim]
     df.to_csv(os.path.join(save_dir, "..", "validation_df.csv"))
 
 

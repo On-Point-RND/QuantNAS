@@ -7,6 +7,8 @@ import torch
 import numpy as np
 import time
 
+from skimage.metrics import peak_signal_noise_ratio, structural_similarity
+
 import shutil
 from PIL import Image
 
@@ -134,6 +136,12 @@ def psnr(img1, img2):
         return float("inf")
     return 20 * math.log10(255.0 / math.sqrt(mse))
 
+def compute_ssim(img1, img2):
+    img1 = tensor2img_np(img1)
+    img2 = tensor2img_np(img2)
+    img1 = rgb2y(img1[4:-4, 4:-4, :])
+    img2 = rgb2y(img2[4:-4, 4:-4, :])
+    return structural_similarity(img1, img2, data_range=255.)
 
 def tensor2img_np(tensor, out_type=np.uint8, min_max=(0, 1)):
     tensor = tensor.squeeze(0)
