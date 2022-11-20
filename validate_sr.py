@@ -114,6 +114,8 @@ def dataset_loop(valid_cfg, model, logger, save_dir, device):
         logger.info("BitOps = {:.2e} operations 32x32".format(flops_32))
         logger.info("BitOps = {:.2e} operations 256x256".format(flops_256))
         logger.info("PSNR = {:.3f}%".format(score_val))
+        logger.info("SSIM = {:.3f}%".format(ssim))
+        
         df.loc[str(dataset)] = [mb_params, flops_32, flops_256, score_val, ssim]
     df.to_csv(os.path.join(save_dir, "..", "validation_df.csv"))
 

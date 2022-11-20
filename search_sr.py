@@ -71,7 +71,7 @@ def run_search(cfg, writer, logger, log_handler):
         alpha_selector=cfg.search.alpha_selector,
         quant_noise=cfg.search.get("quant_noise", False),
         skip_mode=cfg.arch.get("skip_mode", True),
-        primitives=cfg.arch.get("primitives", None)
+        primitives=cfg.arch.get("primitives", None),
     )
 
     if cfg.search.load_path is not None:
@@ -103,8 +103,8 @@ def run_search(cfg, writer, logger, log_handler):
         print("USING SGD")
     else:
         w_optim = torch.optim.Adam(
-            model.weights(), 
-            cfg.search.w_lr, 
+            model.weights(),
+            cfg.search.w_lr,
             weight_decay=cfg.search.w_weight_decay,
         )
         print("USING ADAM")
@@ -141,7 +141,9 @@ def run_search(cfg, writer, logger, log_handler):
         if epoch >= cfg.search.warm_up:
             temperature = cfg.search.temp_max - (
                 cfg.search.temp_max - cfg.search.temp_min
-            ) * (epoch - cfg.search.warm_up) / (cfg.search.epochs - 1 - cfg.search.warm_up)
+            ) * (epoch - cfg.search.warm_up) / (
+                cfg.search.epochs - 1 - cfg.search.warm_up
+            )
 
         # training
         score_train, cur_step, best_current_flops = train(
@@ -300,7 +302,6 @@ def train(
         zip(train_loader, train_alpha_loader)
     ):
 
-        
         trn_X, trn_y = (
             trn_X.to(device, non_blocking=True),
             trn_y.to(device, non_blocking=True),
@@ -315,7 +316,7 @@ def train(
             flops_norm, _ = model.fetch_weighted_flops_and_memory()
             flops_loss.set_norm(flops_norm)
             flops_loss.set_penalty(cfg.search.penalty)
-        
+
         alpha_optim.zero_grad()
 
         if epoch >= cfg.search.warm_up:
@@ -335,8 +336,7 @@ def train(
 
         loss_w, init_loss = criterion(preds, trn_y, epoch, get_initial=True)
         loss_w.backward()
-    
-    
+
         if step == len(train_loader) - 1:
             log_weigths_hist(model, writer, epoch, False)
             grad_norm(model, writer, epoch)
@@ -581,8 +581,8 @@ def log_weigths_hist(model, tb_logger, epoch, log_alpha=False):
         for name in model.alphas:
             for i, alpha in enumerate(model.alphas[name]):
                 tb_logger.add_histogram(
-                    f"weights_alpha_grad/{name}.{i}", 
-                    alpha.grad.cpu().numpy(), 
+                    f"weights_alpha_grad/{name}.{i}",
+                    alpha.grad.cpu().numpy(),
                     epoch,
                 )
 
@@ -628,7 +628,6 @@ def grad_norm(model, tb_logger, epoch):
     }
     for i, body in enumerate(net.body):
         blocks[f"body.{i}"] = body.body
-        blocks[f"skip.{i}"] = body.skip
     mean_grads = {}
     for name in blocks:
         for i, mixop in enumerate(blocks[name].net):

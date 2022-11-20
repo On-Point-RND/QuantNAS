@@ -3,7 +3,7 @@ import random
 import argparse
 import genotypes as gt
 from validate_sr import get_model, dataset_loop
-from augment_sr import run_train
+from augment_sr import run_train, train_setup
 
 from omegaconf import OmegaConf as omg
 import utils
@@ -66,12 +66,10 @@ def train_loop(cfg):
         random_fp_gen = set_fp(random_gen)
         tp = ["fp", "quant"]
 
-        for i, genotype in enumerate([random_fp_gen, random_gen]):
+        for i, genotype in enumerate([random_fp_gen]):
             genotype = gt.Genotype_SR(**genotype)
-            print(genotype)
 
             cfg.env.run_name = f"{args.dir}_trail_{r}_{tp[i]}"
-
             run_path = utils.get_run_path(cfg.env.log_dir, cfg.env.run_name)
             gen_path = os.path.join(run_path, "genotype.gen")
             cfg.train.genotype_path = gen_path
@@ -79,7 +77,9 @@ def train_loop(cfg):
             with open(gen_path, "w") as f:
                 f.write(str(genotype))
 
-            run_train(cfg)
+            cfg, writer, logger, log_handler = train_setup(cfg)
+            run_train(cfg, writer, logger, log_handler)
+            
 
             weights_path = os.path.join(cfg.env.save_path, "best.pth.tar")
 
@@ -100,11 +100,11 @@ def train_loop(cfg):
                 body_cells=cfg.arch.body_cells,
                 skip_mode=cfg.arch.skip_mode,
             )
-
+    
             dataset_loop(valid_cfg, model, logger, save_dir, cfg.env.gpu)
 
 
 if __name__ == "__main__":
-    CFG_PATH = "./configs/sr_config.yaml"
+    CFG_PATH = "./configs/fp_config.yaml"
     cfg = omg.load(CFG_PATH)
     train_loop(cfg)

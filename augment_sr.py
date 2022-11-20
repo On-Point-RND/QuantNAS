@@ -1,4 +1,4 @@
-""" Training augmented model """
+""" Training found model """
 import os
 import torch
 import torch.nn as nn
@@ -110,7 +110,6 @@ def run_train(cfg, writer, logger, log_handler):
     )
 
     model.to(device)
-
     # model size
     mb_params = utils.param_size(model)
     logger.info("Model size = {:.3f} MB".format(mb_params))
@@ -239,10 +238,7 @@ def train(
                 )
             )
         
-        writer.add_scalars("tune/std_stats", model.stats['std'],cur_step)
-        writer.add_scalars("tune/adaskip_mean", model.stats['learnable']['mean'],cur_step)
-        writer.add_scalars("tune/adaskip_std", model.stats['learnable']['std'],cur_step)
-    
+  
         writer.add_scalar("tune/train/loss", loss_meter.avg, cur_step)
         writer.add_scalar("tune/train/grad_norm", grad_norm, cur_step)
 

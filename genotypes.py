@@ -9,7 +9,7 @@ Genotype_SR = namedtuple("Genotype_SR", "head body tail skip upsample")
 
 
 body = [
-    "skip_connect",
+    # "skip_connect",
     "conv_5x1_1x5",
     "conv_3x1_1x3",
     "simple_3x3",
@@ -25,19 +25,21 @@ body = [
     "DWS_5x5",
     "growth2_5x5",
     "growth2_3x3",
-    "decenc_3x3_4",
+    # "decenc_3x3_4",
     "decenc_3x3_2",
     "decenc_5x5_2",
-    "decenc_5x5_8",
-    "decenc_3x3_8",
-    "decenc_3x3_4_g3",
+    # "decenc_5x5_8",
+    # "decenc_3x3_8",
+    # "decenc_3x3_4_g3",
     "decenc_3x3_2_g3",
     "decenc_5x5_2_g3",
 ]
 
 head = [
-    "conv_5x1_1x5",
-    "conv_3x1_1x3",
+    # "conv_5x1_1x5",
+    # "conv_3x1_1x3",
+    # "DWS_3x3",
+    # "DWS_5x5",
     "simple_1x1",
     "simple_3x3",
     "simple_5x5",
@@ -50,13 +52,14 @@ head = [
 
 tail = [
     # "simple_1x1",
+    "skip_connect",
     "simple_3x3",
     "simple_5x5",
     # "growth2_5x5",
     # "growth2_3x3",
     "simple_3x3_grouped_3",
     "simple_5x5_grouped_3",
-    # 'simple_1x1_grouped_3',
+    "simple_1x1_grouped_3",
 ]
 
 upsample = [
@@ -68,8 +71,8 @@ upsample = [
     # "growth2_3x3",
     # "decenc_3x3_2",
     # "decenc_5x5_2",
-    # "simple_3x3_grouped_3",
-    # "simple_5x5_grouped_3",
+    "simple_3x3_grouped_3",
+    "simple_5x5_grouped_3",
     # 'simple_1x1_grouped_3',
     # 'simple_1x1',
 ]
@@ -100,32 +103,59 @@ def from_str(s):
 
 def to_dag_sr(C_fixed, gene, gene_type, c_in=3, c_out=3, scale=4):
     """generate discrete ops from gene"""
-    dag = []
-    for i, (op_name, bit) in enumerate(gene):
-        C_in, C_out, = (
-            C_fixed,
-            C_fixed,
-        )
-        if i == 0 and gene_type == "head":
-            C_in = c_in
-        elif i + 1 == len(gene) and gene_type == "tail":
-            C_out = c_out
-        elif i == 0 and gene_type == "tail":
-            C_in = c_in
+    if gene_type == "body":
+        dag = nn.ModuleList()
+        for i, (op_name, bit) in enumerate(gene):
 
-        elif gene_type == "upsample":
-            C_in = C_fixed
-            C_out = 3 * (scale**2)
-        else:
-            C_in = C_fixed
-            C_out = C_fixed
+            # one before last
+            if i + 1 == len(gene) - 1:
+                C_in = C_fixed // 2
+                C_out = C_fixed // 2
 
-        print(gene_type, op_name, C_in, C_out, C_fixed, bit)
-        op = ops_sr.OPS[op_name](
-            C_in, C_out, [bit], C_fixed, 1, affine=False, shared=False
-        )
-        dag.append(op)
-    return nn.Sequential(*dag)
+            # last
+            elif i + 1 == len(gene):
+                C_in = (C_fixed // 2) * (len(gene) - 1)
+                C_out = C_fixed
+
+            elif i != 0:
+                C_in = C_fixed // 2
+                C_out = C_fixed
+
+            else:
+                C_in = C_fixed
+                C_out = C_fixed
+
+            print(i + 1, gene_type, op_name, C_in, C_out, C_fixed, bit)
+            op = ops_sr.OPS[op_name](
+                C_in, C_out, [bit], C_fixed, 1, affine=False, shared=False
+            )
+            dag.append(op)
+
+        return dag
+
+    else:
+        dag = []
+        for i, (op_name, bit) in enumerate(gene):
+            if i == 0 and gene_type == "head":
+                C_in = c_in
+                C_out = C_fixed
+            elif gene_type == "tail":
+                C_in = c_in
+                C_out = c_out
+            elif gene_type == "upsample":
+                C_in = C_fixed
+                C_out = 3 * (scale**2)
+            else:
+                C_in = C_fixed
+                C_out = C_fixed
+
+            print(i + 1, gene_type, op_name, C_in, C_out, C_fixed, bit)
+            op = ops_sr.OPS[op_name](
+                C_in, C_out, [bit], C_fixed, 1, affine=False, shared=False
+            )
+            dag.append(op)
+
+        return nn.Sequential(*dag)
 
 
 def parse_sr(alpha, name, bits=[2], primitives=None):

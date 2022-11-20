@@ -221,6 +221,8 @@ class QAConv2d(nn.Module):
     def __init__(self, *args, **kwargs):
         super(QAConv2d, self).__init__()
         self.bit = kwargs.pop("bits")[0]
+        if self.bit == 32:
+            self.act_32 = nn.LeakyReLU(0.1)
         self.bit_orig = self.bit
         self.conv = QuantConv(**kwargs)
         self._set_q_fucntions(self.bit)
@@ -241,7 +243,10 @@ class QAConv2d(nn.Module):
 
     def forward(self, input_x):
         quantized_weight = self.quan_w_fn(self.conv.weight)
-        quantized_act = self.quan_a_fn(input_x)
+        if self.bit == 32:
+            quantized_act = self.act_32(input_x)
+        else:
+            quantized_act = self.quan_a_fn(input_x)
         out = self.conv(quantized_act, quantized_weight)
         return out
 

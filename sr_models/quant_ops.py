@@ -502,7 +502,7 @@ class DecEnc(BaseConv):
             # nn.BatchNorm2d(C_in),
             self.conv_func(
                 in_channels=C_in,
-                out_channels=C_fixed // reduce,
+                out_channels=C_in // reduce,
                 bits=bits,
                 kernel_size=kernel_size,
                 stride=stride,
@@ -514,7 +514,7 @@ class DecEnc(BaseConv):
             # nn.BatchNorm2d(C_in),
             self.conv_func(
                 in_channels=C_in // reduce,
-                out_channels=C_fixed // reduce,
+                out_channels=C_in // reduce,
                 bits=bits,
                 kernel_size=kernel_size,
                 stride=stride,
@@ -525,7 +525,7 @@ class DecEnc(BaseConv):
             ),
             # nn.BatchNorm2d(C_in),
             self.conv_func(
-                in_channels=C_fixed // reduce,
+                in_channels=C_in // reduce,
                 out_channels=C_out,
                 bits=bits,
                 kernel_size=kernel_size,
@@ -574,13 +574,13 @@ class DWS(BaseConv):
             # nn.BatchNorm2d(C_in),
             self.conv_func(
                 in_channels=C_in * 4,
-                out_channels=C_in,
+                out_channels=C_out,
                 bits=bits,
                 kernel_size=1,
                 stride=1,
                 padding=0,
                 dilation=1,
-                groups=C_in,
+                groups=C_out,
                 bias=False,
             ),
             # nn.BatchNorm2d(C_out, affine=True),
@@ -615,7 +615,7 @@ class FacConv(BaseConv):
             # nn.BatchNorm2d(C_in),
             self.conv_func(
                 in_channels=C_in,
-                out_channels=C_fixed * growth,
+                out_channels=C_in,
                 bits=bits,
                 kernel_size=(kernel_length, 1),
                 stride=stride,
@@ -624,7 +624,7 @@ class FacConv(BaseConv):
                 bias=False,
             ),
             self.conv_func(
-                in_channels=C_fixed * growth,
+                in_channels=C_in,
                 out_channels=C_out,
                 bits=bits,
                 kernel_size=(1, kernel_length),
