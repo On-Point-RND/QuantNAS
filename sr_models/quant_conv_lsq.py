@@ -263,7 +263,7 @@ class SepQAConv2d(nn.Module):
         for _ in range(len(self.bits)):
             self.conv.append(QuantConv(**kwargs))
 
-        self.acts = [HWGQ(bit) for bit in self.bits]
+        self.acts = nn.ModuleList([HWGQ(bit) for bit in self.bits])
         self.q_fn = []
         for bit in self.bits:
             self.q_fn.append(
@@ -338,7 +338,7 @@ class SharedQAConv2d(nn.Module):
         super(SharedQAConv2d, self).__init__()
         self.bits = kwargs.pop("bits").copy()
         self.conv = QuantConv(**kwargs)
-        self.acts = [HWGQ(bit) for bit in self.bits]
+        self.acts = nn.ModuleList([HWGQ(bit) for bit in self.bits])
         self.q_fn = []
         for bit in self.bits:
             self.q_fn.append(
