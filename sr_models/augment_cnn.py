@@ -78,45 +78,19 @@ class AugmentCNN(nn.Module):
 
     def forward(self, x):
 
-        self.stats = dict()
-        self.stats["std"] = dict()
-        self.stats["learnable"] = dict()
-        self.stats["learnable"]["mean"] = dict()
-        self.stats["learnable"]["std"] = dict()
-        self.stats["learnable"]["eps"] = dict()
-
         init = self.head(x)
         x = init
-        self.stats["std"]["head"] = torch.std(
-            init, dim=[1, 2, 3], keepdim=True
-        ).flatten()[0]
 
         def func(x):
+            # xs = 0
             for cell in self.body:
                 x = cell(x)
+                # xs += x
             return x
 
         x = self.upsample(self.adn_one(x, func, init))
-
-        if not self.adn_one.skip_mode:
-            self.stats["learnable"]["std"]["body_out"] = torch.mean(
-                self.adn_one.s
-            )
-
-        self.stats["std"]["body"] = torch.std(
-            x, dim=[1, 2, 3], keepdim=True
-        ).flatten()[0]
-
-        tail = self.adn_two(x, self.tail, x)
-
-        self.stats["std"]["tail"] = torch.std(
-            tail, dim=[1, 2, 3], keepdim=True
-        ).flatten()[0]
-
-        if not self.adn_one.skip_mode:
-            self.stats["learnable"]["std"]["tail"] = torch.mean(self.adn_two.s)
-
-        return tail
+        #tail = self.adn(_two(x, self.tail, x)
+        return self.tail(x) + x
 
     def set_fp(self):
         if self.quant_mode == True:
@@ -140,4 +114,4 @@ class AugmentCNN(nn.Module):
                 b, m = m._fetch_info()
                 sum_flops += b
                 sum_memory = m
-        return sum_flops, sum_memory
+        return (sum_flops, sum_memory)

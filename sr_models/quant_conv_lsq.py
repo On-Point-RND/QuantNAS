@@ -46,12 +46,15 @@ class HWGQ(nn.Module):
         self.bit = bit
         if bit < 32:
             self.step = hwgq_steps[bit]
-        else:
+        elif bit == 32:
+            self.prelu = nn.PReLU(init=0.1)
             self.step = None
+        else:
+            raise NotImplementedError 
 
     def forward(self, x):
         if self.bit >= 32:
-            return nn.functional.relu(x)
+            return self.prelu(x)
         lvls = float(2**self.bit - 1)
         clip_thr = self.step * lvls
         y = x.clamp(min=0.0, max=clip_thr)

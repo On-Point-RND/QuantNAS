@@ -15,7 +15,7 @@ arch:
       head: 2
       skip: 1
       tail: 2
-      body: 2
+      body: 3
       upsample: 1
   body_cells: 3  # body consists of several repetitions of identical blocks
   skip_mode: True # If False -> use ADM
