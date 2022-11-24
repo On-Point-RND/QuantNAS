@@ -10,6 +10,9 @@ from torch.utils.tensorboard import SummaryWriter
 from omegaconf import OmegaConf as omg
 
 from sr_models.augment_cnn import AugmentCNN
+from sr_models.RFDN.RFDN import RFDN
+from pthflops import count_Flops
+
 import utils
 from sr_base.datasets import CropDataset
 
@@ -22,7 +25,7 @@ def train_setup(cfg):
 
     # INIT FOLDERS & cfg
     cfg.env.save_path = utils.get_run_path(
-        cfg.env.log_dir, "TUNE_" + cfg.env.run_name
+        cfg.env.log_dir, "TUNE/" + cfg.env.run_name
     )
 
     log_handler = utils.LogHandler(cfg.env.save_path + "/log.txt")
@@ -108,7 +111,8 @@ def run_train(cfg, writer, logger, log_handler):
         blocks=cfg.arch.body_cells,
         skip_mode=cfg.arch.skip_mode,
     )
-
+    # model = RFDN()
+    # print(model)
     model.to(device)
 
     # model size
@@ -239,9 +243,9 @@ def train(
                 )
             )
         
-        writer.add_scalars("tune/std_stats", model.stats['std'],cur_step)
-        writer.add_scalars("tune/adaskip_mean", model.stats['learnable']['mean'],cur_step)
-        writer.add_scalars("tune/adaskip_std", model.stats['learnable']['std'],cur_step)
+        # writer.add_scalars("tune/std_stats", model.stats['std'],cur_step)
+        # writer.add_scalars("tune/adaskip_mean", model.stats['learnable']['mean'],cur_step)
+        # writer.add_scalars("tune/adaskip_std", model.stats['learnable']['std'],cur_step)
     
         writer.add_scalar("tune/train/loss", loss_meter.avg, cur_step)
         writer.add_scalar("tune/train/grad_norm", grad_norm, cur_step)
@@ -335,4 +339,9 @@ if __name__ == "__main__":
         body_cells=cfg.arch.body_cells,
         skip_mode=cfg.arch.skip_mode,
     )
+    # model = RFDN()
+    # model_ = torch.load(weights_path, map_location="cpu")
+    # model.load_state_dict(model_)
+    # model.to(cfg.env.gpu)
     dataset_loop(valid_cfg, model, logger, save_dir, cfg.env.gpu)
+    # logger.info(f"FLOPS = {count_Flops(model)}")

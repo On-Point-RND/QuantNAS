@@ -28,3 +28,4 @@ class AdaptiveNormalization(nn.Module):
             out = x_nm*self.s + skip
 
         return out
+        

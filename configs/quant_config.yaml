@@ -7,7 +7,7 @@ dataset:
   debug_mode: False # run on a small porion of data
   
 arch:
-  bits: [8,4] #bitwidth options
+  bits: [32] #bitwidth options  
   channels: 3 # input channels
   c_fixed: 36 # channels 
   scale: 4
@@ -17,19 +17,19 @@ arch:
       tail: 2
       body: 2
       upsample: 1
-  body_cells: 3 # body consists of several repetitions of identical blocks
-  skip_mode: False # If False -> use ADM
-  primitives:
-    head: ["simple_3x3", "simple_5x5", "simple_3x3_grouped_3", "simple_5x5_grouped_3"]
-    body: ["conv_5x1_1x5", "conv_3x1_1x3", "simple_3x3", "simple_5x5"]
-    skip: ["simple_1x1", "simple_3x3", "simple_5x5"]
-    tail: ["simple_1x1", "simple_3x3", "simple_5x5","simple_5x5_grouped_3","simple_3x3_grouped_3"]
-    upsample: ["simple_5x5_grouped_3",simple_3x3_grouped_3, "simple_3x3", "simple_5x5"]
+  body_cells: 3  # body consists of several repetitions of identical blocks
+  skip_mode: True # If False -> use ADM
+  # primitives:
+    # head: ["simple_3x3", "simple_5x5", "simple_3x3_grouped_3", "simple_5x5_grouped_3"]
+    # body: ["conv_5x1_1x5", "conv_3x1_1x3", "simple_3x3", "simple_5x5"]
+    # skip: ["simple_1x1", "simple_3x3", "simple_5x5"]
+    # tail: ["simple_1x1", "simple_3x3", "simple_5x5","simple_5x5_grouped_3","simple_3x3_grouped_3"]
+    # upsample: ["simple_5x5_grouped_3",simple_3x3_grouped_3, "simple_3x3", "simple_5x5"]
 
 env:
-  run_name: 'Recovery_final_model' # name of the experiment. Ignored when 'batch_exp.py' is used.
+  run_name: 'Dissection/No_Skips_Around_Conv' # name of the experiment. Ignored when 'batch_exp.py' is used.
   gpu: 0 # Device. Ignored when 'batch_exp.py' is used.
-  log_dir: /home/dev/data_main/LOGS/QUANT/ # Directory for experiments output.
+  log_dir: /home/dev/data_main/LOGS/SR/11_2022/ # Directory for experiments output.
   im_dir: 'arch_images' # Subfolder of the experiment in which images of architectures are saved.
   workers: 4 
   seed : 777 
@@ -46,7 +46,7 @@ search:
   sparse_type: entropy # Sparsity penalty. Available options: 'l1_softmax', 'l1', 'entropy', 'none'.
   sparse_coef: 1e-3 #1e-4 # Coefficient. Recommend: 0.001 for entropy, 0.0001 for l1.
   optimizer: adam # Weights optimizer. Options: 'sgd', 'adam'
-  quant_noise: True
+  quant_noise: False
 
   lr_scheduler: cosine # Lr scheduler for weights. 
   w_lr: 1e-3 # lr for weights
@@ -67,6 +67,6 @@ train:
   print_freq : 200 # print frequency
   epochs : 30 # Number of training epochs
   # Genotype of selected model. Ignored when 'batch_exp.py' is used. 
-  genotype_path:  /home/dev/data_main/LOGS/QUANT/recover/trail_1/SEARCH_batch_experiment_penalty_0_trail_1-2022-02-05-20/best_arch.gen
+  genotype_path:  /home/dev/2021_09/QuanToaster/genotype_example_sr.gen
 
 

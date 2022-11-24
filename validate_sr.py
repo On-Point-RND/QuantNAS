@@ -9,6 +9,9 @@ import utils
 from sr_base.datasets import ValidationSet
 from genotypes import from_str
 import pandas as pd
+from pthflops import count_Flops
+from sr_models.RFDN.RFDN import RFDN
+
 
 
 def get_model(
@@ -30,8 +33,9 @@ def get_model(
         skip_mode=skip_mode,
     )
 
-    model_ = torch.load(weights_path, map_location="cpu")
-    model.load_state_dict(model_)
+    if weights_path is not None:
+        model_ = torch.load(weights_path, map_location="cpu")
+        model.load_state_dict(model_)
     model.to(device)
     return model
 
@@ -122,9 +126,9 @@ if __name__ == "__main__":
     CFG_PATH = "./sr_models/valsets4x.yaml"
     valid_cfg = omg.load(CFG_PATH)
     run_name = "TEST_2"
-    genotype_path = "/home/dev/data_main/LOGS/QUANT/bilevel_search_v2/trail_1/SEARCH_batch experiment_penalty_0.1_trail_1-2021-12-18-15/best_arch.gen"
-    weights_path = "/home/dev/data_main/LOGS/QUANT/bilevel_search_v2/trail_1/TUNE_batch experiment_penalty_0.1_trail_1-2021-12-18-21/best.pth.tar"
-    log_dir = "/home/dev/data_main/LOGS/QUANT/"
+    genotype_path = "/home/dev/2021_09/QuanToaster/genotype_example_sr.gen"
+    weights_path = None #"/home/dev/data_main/LOGS/SR/11_2022/TUNE/Basic_With_ESA-2022-11-22-13/best.pth.tar"
+    log_dir = "/home/dev/data_main/LOGS/SR/11_2022/TUNE/"
     save_dir = os.path.join(log_dir, run_name)
     os.makedirs(save_dir, exist_ok=True)
     channels = 3
@@ -136,6 +140,9 @@ if __name__ == "__main__":
 
     logger = utils.get_logger(save_dir + "/validation_log.txt")
     logger.info(genotype)
+    
+    # model = RFDN()
+    # model.to(device)
 
     model = get_model(
         weights_path,
@@ -147,4 +154,5 @@ if __name__ == "__main__":
         body_cells=3,
         skip_mode=True
     )
+    # print(count_Flops(model))
     dataset_loop(valid_cfg, model, logger, save_dir, device)
