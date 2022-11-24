@@ -9,90 +9,103 @@ Genotype_SR = namedtuple("Genotype_SR", "head body tail skip upsample")
 
 
 body = [
-    # "skip_connect",
-    "conv_5x1_1x5",
-    "conv_3x1_1x3",
-    "simple_3x3",
+    "skip_connect",
     "simple_1x1",
+    "simple_3x3",
     "simple_5x5",
-    # "simple_1x1_grouped_full",
-    # "simple_3x3_grouped_full",
-    # "simple_5x5_grouped_full",
+    
     "simple_1x1_grouped_3",
     "simple_3x3_grouped_3",
     "simple_5x5_grouped_3",
-    "DWS_3x3",
-    "DWS_5x5",
-    "growth2_5x5",
-    "growth2_3x3",
-    # "decenc_3x3_4",
-    "decenc_3x3_2",
-    "decenc_5x5_2",
-    # "decenc_5x5_8",
-    # "decenc_3x3_8",
-    # "decenc_3x3_4_g3",
-    "decenc_3x3_2_g3",
-    "decenc_5x5_2_g3",
+    
+    "simple_3x3_grouped_full",
+    "simple_5x5_grouped_full",
+    
+    "simple_3x3_d2",
+    "simple_3x3_grouped_3_d2",
+
+    "conv_3x1_1x3",
+    "conv_5x1_1x5",
 ]
 
 head = [
-    # "conv_5x1_1x5",
-    # "conv_3x1_1x3",
-    # "DWS_3x3",
-    # "DWS_5x5",
+    # "skip_connect",
     "simple_1x1",
     "simple_3x3",
     "simple_5x5",
-    "growth2_5x5",
-    "growth2_3x3",
+    
     "simple_1x1_grouped_3",
     "simple_3x3_grouped_3",
     "simple_5x5_grouped_3",
+    
+    "simple_3x3_grouped_full",
+    "simple_5x5_grouped_full",
+    
+    "simple_3x3_d2",
+    "simple_3x3_grouped_3_d2",
+
+    "conv_3x1_1x3",
+    "conv_5x1_1x5",
 ]
 
 tail = [
-    # "simple_1x1",
     "skip_connect",
-    "simple_3x3",
-    "simple_5x5",
-    # "growth2_5x5",
-    # "growth2_3x3",
-    "simple_3x3_grouped_3",
-    "simple_5x5_grouped_3",
-    "simple_1x1_grouped_3",
-]
-
-upsample = [
-    "conv_5x1_1x5",
-    "conv_3x1_1x3",
-    "simple_3x3",
-    "simple_5x5",
-    # "growth2_5x5",
-    # "growth2_3x3",
-    # "decenc_3x3_2",
-    # "decenc_5x5_2",
-    "simple_3x3_grouped_3",
-    "simple_5x5_grouped_3",
-    # 'simple_1x1_grouped_3',
-    # 'simple_1x1',
-]
-
-skip = [
-    # "decenc_3x3_2",
-    # "decenc_5x5_2",
-    # "conv_5x1_1x5",
-    # "conv_3x1_1x3",
     "simple_1x1",
     "simple_3x3",
     "simple_5x5",
+    
+    "simple_1x1_grouped_3",
+    "simple_3x3_grouped_3",
+    "simple_5x5_grouped_3",
+    
+    "simple_3x3_d2",
+    "simple_3x3_grouped_3_d2",
+
+    "conv_3x1_1x3",
+    "conv_5x1_1x5",
+]
+
+upsample = [
+    "simple_1x1",
+    "simple_3x3",
+    "simple_5x5",
+    
+    "simple_1x1_grouped_3",
+    "simple_3x3_grouped_3",
+    "simple_5x5_grouped_3",
+    
+    "simple_3x3_d2",
+    "simple_3x3_grouped_3_d2",
+
+    "conv_3x1_1x3",
+    "conv_5x1_1x5",
+]
+
+skip = [
+    "simple_1x1",
+    "simple_3x3",
+    "simple_5x5",
+    
+    "simple_1x1_grouped_3",
+    "simple_3x3_grouped_3",
+    "simple_5x5_grouped_3",
+    
+    "simple_3x3_grouped_full",
+    "simple_5x5_grouped_full",
+    
+    "simple_3x3_d2",
+    "simple_3x3_grouped_3_d2",
+
+    "conv_3x1_1x3",
+    "conv_5x1_1x5",
 ]
 
 PRIMITIVES_SR = {
     "head": head,
     "body": body,
-    "skip": body,
-    "tail": head,
-    "upsample": head,
+    "skip": skip,
+    "tail": tail,
+    "upsample": upsample,
 }
 
 
@@ -111,11 +124,9 @@ def to_dag_sr(C_fixed, gene, gene_type, c_in=3, c_out=3, scale=4):
         )
         if i == 0 and gene_type == "head":
             C_in = c_in
-        elif i + 1 == len(gene) and gene_type == "tail":
-            C_out = c_out
-        elif i == 0 and gene_type == "tail":
+        elif gene_type == "tail":
             C_in = c_in
-
+            C_out = c_in
         elif gene_type == "upsample":
             C_in = C_fixed
             C_out = 3 * (scale**2)

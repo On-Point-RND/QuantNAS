@@ -155,9 +155,9 @@ class QuantConv(nn.Conv2d):
     def __init__(self, **kwargs):
         super(QuantConv, self).__init__(**kwargs)
         self.kernel = self.to_tuple(self.kernel_size)
-        self.stride = self.to_tuple(self.stride)
-        self.padding = self.to_tuple(self.padding)
-        self.dilation = self.to_tuple(self.dilation)
+        # self.stride = self.to_tuple(self.stride)
+        # self.padding = self.to_tuple(self.padding)
+        # self.dilation = self.to_tuple(self.dilation)
         # complexities
         # FLOPs = 2 x Cin x Cout x k**2 x Wout x Hout / groups
         self.param_size = (
@@ -182,12 +182,14 @@ class QuantConv(nn.Conv2d):
         BATCH x C x W x H
         """
         # get the same device to avoid errors
+        output = self._conv_forward(input_x, quantized_weight, bias=None)
+
+        w_out = output.shape[2]
+        h_out = output.shape[3]
+
         device = input_x.device
 
         c_in, w_in, h_in = input_x.shape[1], input_x.shape[2], input_x.shape[3]
-
-        w_out = self.compute_out(w_in, "w")
-        h_out = self.compute_out(h_in, "h")
 
         tmp = torch.tensor(c_in * w_in * h_in, dtype=torch.float).to(device)
         self.memory_size.copy_(tmp)
@@ -197,24 +199,24 @@ class QuantConv(nn.Conv2d):
         self.flops.copy_(tmp)
         del tmp
 
-        return self._conv_forward(input_x, quantized_weight, bias=None)
+        return output
 
-    def compute_out(self, input_size, spatial="w"):
+    # def compute_out(self, input_size, spatial="w"):
 
-        if spatial == "w":
-            idx = 0
-        if spatial == "h":
-            idx = 1
-        return int(
-            (
-                input_size
-                + 2 * self.padding[idx]
-                - self.dilation[idx] * (self.kernel[idx] - 1)
-                - 1
-            )
-            / self.stride[idx]
-            + 1
-        )
+    #     if spatial == "w":
+    #         idx = 0
+    #     if spatial == "h":
+    #         idx = 1
+    #     return int(
+    #         (
+    #             input_size
+    #             + 2 * self.padding[idx]
+    #             - self.dilation[idx] * (self.kernel[idx] - 1)
+    #             - 1
+    #         )
+    #         / self.stride[idx]
+    #         + 1
+    #     )
 
     def _fetch_info(self):
         return self.flops.item(), self.memory_size.item()

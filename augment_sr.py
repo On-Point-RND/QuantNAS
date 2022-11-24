@@ -25,7 +25,7 @@ def train_setup(cfg):
 
     # INIT FOLDERS & cfg
     cfg.env.save_path = utils.get_run_path(
-        cfg.env.log_dir, "TUNE/" + cfg.env.run_name
+        cfg.env.log_dir, "TUNE_" + cfg.env.run_name
     )
 
     log_handler = utils.LogHandler(cfg.env.save_path + "/log.txt")
