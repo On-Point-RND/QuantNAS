@@ -13,16 +13,16 @@ arch:
   scale: 4
   arch_pattern: # the number of blocks of different types
       head: 2
-      skip: 0
+      skip: 1
       tail: 3
-      body: 4
+      body: 3
       upsample: 1
-  body_cells: 4 # body consists of several repetitions of identical blocks
+  body_cells: 3 # body consists of several repetitions of identical blocks
   skip_mode: False # If False -> use ADM
 
 env:
-  run_name: 'gumbel_checkpoint' # name of the experiment. Ignored when 'batch_exp.py' is used.
-  gpu: 0 # Device. Ignored when 'batch_exp.py' is used. 
+  run_name: 'test_base_CCA_SKIP_two' # name of the experiment. Ignored when 'batch_exp.py' is used.
+  gpu: 1 # Device. Ignored when 'batch_exp.py' is used. 
   log_dir: /home/dev/data_main/LOGS/SR/NEW_SPACE/ # Directory for experiments output.
   im_dir: 'arch_images' # Subfolder of the experiment in which images of architectures are saved.
   workers: 4 
@@ -60,4 +60,4 @@ train:
   print_freq : 200 # print frequency
   epochs : 30 # Number of training epochs
   # Genotype of selected model. Ignored when 'batch_exp.py' is used. 
-  genotype_path: #/home/dev/data_main/LOGS/QUANT/bilevel_search_v2/trail_1/SEARCH_batch experiment_penalty_0.1_trail_1-2021-12-18-15/best_arch.gen
+  genotype_path: /home/dev/work_main/2022/SR/genotype_example_sr.gen

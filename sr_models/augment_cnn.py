@@ -1,5 +1,4 @@
-""" CNN for found architechture """
-
+""" CNN for network augmentation """
 import torch
 import torch.nn as nn
 import genotypes as gt
@@ -7,39 +6,30 @@ from sr_models.quant_conv_lsq import QAConv2d
 from sr_models.ADN import AdaptiveNormalization as ADN
 
 
-class ResidualSplitter(nn.Module):
-    def __init__(self, body, f_fixed, skip_mode=True):
+def summer(values, increments):
+    return (v + i for v, i in zip(values, increments))
+
+
+class Residual(nn.Module):
+    def __init__(self, skip, body, skip_mode=True):
         super().__init__()
+        self.skip = skip
         self.body = body
-        self.f_fixed = f_fixed
         self.skip_mode = skip_mode
+
         self.adn = ADN(36, skip_mode=skip_mode)
 
     def forward(self, x):
-        def func(z):
-            distilled_list = []
-            for i, c in enumerate(self.body):
-                if (i + 1) != len(self.body):
-                    # device  = x.device
-                    z = c(z)
-
-                    # if one before last
-                    if (i + 1) == len(self.body) - 1:
-                        distilled_list.append(z)
-                    else:
-                        distilled, z = torch.split(
-                            z, (self.f_fixed // 2, self.f_fixed // 2), dim=1
-                        )
-                        distilled_list.append(distilled)
-
-            z = torch.cat(distilled_list, dim=1)
-            return c(z)
+        def func(x):
+            return self.skip(x) + self.body(x)
 
         return self.adn(x, func, x)
 
     def fetch_weighted_info(self):
-
-        flops, memory = self.body.fetch_info()
+        flops = 0
+        memory = 0
+        for layer in (self.skip, self.body):
+            flops, memory = summer((flops, memory), layer.fetch_info())
         return flops, memory
 
 
@@ -63,14 +53,15 @@ class AugmentCNN(nn.Module):
             self.c_fixed, genotype.head, gene_type="head", c_in=c_in
         )
 
-        body = []
+        self.body = nn.ModuleList()
         for _ in range(blocks):
             b = gt.to_dag_sr(
                 self.c_fixed, genotype.body, gene_type="body", c_in=c_in
             )
-
-        body.append(ResidualSplitter(b, self.c_fixed, skip_mode=skip_mode))
-        self.body = nn.Sequential(*body)
+            s = gt.to_dag_sr(
+                self.c_fixed, genotype.skip, gene_type="skip", c_in=c_in
+            )
+            self.body.append(Residual(s, b, skip_mode=skip_mode))
 
         upsample = gt.to_dag_sr(
             self.c_fixed, genotype.upsample, gene_type="upsample"
@@ -90,10 +81,16 @@ class AugmentCNN(nn.Module):
         init = self.head(x)
         x = init
 
-        x = self.adn_one(x, self.body, init)
-        x = self.upsample(x)
-        tail = self.adn_two(x, self.tail, x)
-        return tail
+        def func(x):
+            # xs = 0
+            for cell in self.body:
+                x = cell(x)
+                # xs += x
+            return x
+
+        x = self.upsample(self.adn_one(x, func, init))
+        #tail = self.adn(_two(x, self.tail, x)
+        return self.tail(x) + x
 
     def set_fp(self):
         if self.quant_mode == True:
@@ -117,4 +114,4 @@ class AugmentCNN(nn.Module):
                 b, m = m._fetch_info()
                 sum_flops += b
                 sum_memory = m
-        return sum_flops, sum_memory
+        return (sum_flops, sum_memory)

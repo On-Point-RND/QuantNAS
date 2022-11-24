@@ -12,6 +12,7 @@ class SearchCNNController(nn.Module):
     Stores and handles usage of alphas.
     Uses SearchArch from 'search_cells.py' as supernet and exapnds it with alphas for operations importance.
     """
+
     def __init__(
         self,
         c_init,
@@ -33,7 +34,9 @@ class SearchCNNController(nn.Module):
         self.device_ids = device_ids
         self.temp = 1
         self.bits = bits
-        self.primitives = primitives if not primitives is None else gt.PRIMITIVES_SR
+        self.primitives = (
+            primitives if not primitives is None else gt.PRIMITIVES_SR
+        )
         # initialize architect parameters: alphass
         self.n_ops = len(self.primitives)
 
@@ -44,7 +47,9 @@ class SearchCNNController(nn.Module):
             params = nn.ParameterList()
             for _ in range(arch_pattern[name]):
                 params.append(
-                    nn.Parameter(torch.zeros(len(bits) * len(self.primitives[name])))
+                    nn.Parameter(
+                        torch.zeros(len(bits) * len(self.primitives[name]))
+                    )
                 )
             self.alphas[name] = params
 
@@ -114,10 +119,14 @@ class SearchCNNController(nn.Module):
                 for op_name in self.primitives[name]:
                     for bit in self.bits:
                         alpha_names += [f"{op_name}_{bit}"]
-                assert len(alpha_names) == len(alphas.detach().cpu().numpy().tolist())
+                assert len(alpha_names) == len(
+                    alphas.detach().cpu().numpy().tolist()
+                )
                 writer.add_scalars(
                     f"alphas_softmax/{name}.{i}",
-                    dict(zip(alpha_names, alphas.detach().cpu().numpy().tolist())),
+                    dict(
+                        zip(alpha_names, alphas.detach().cpu().numpy().tolist())
+                    ),
                     epoch,
                 )
 
@@ -130,10 +139,14 @@ class SearchCNNController(nn.Module):
                 for op_name in self.primitives[name]:
                     for bit in self.bits:
                         alpha_names += [f"{op_name}_{bit}"]
-                assert len(alpha_names) == len(alphas.detach().cpu().numpy().tolist())
+                assert len(alpha_names) == len(
+                    alphas.detach().cpu().numpy().tolist()
+                )
                 writer.add_scalars(
                     f"alphas_orig/{name}.{i}",
-                    dict(zip(alpha_names, alphas.detach().cpu().numpy().tolist())),
+                    dict(
+                        zip(alpha_names, alphas.detach().cpu().numpy().tolist())
+                    ),
                     epoch,
                 )
 

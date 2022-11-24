@@ -93,7 +93,6 @@ def run_train(cfg, writer, logger, log_handler):
 
     criterion = nn.L1Loss().to(device)
 
-
     with open(cfg.train.genotype_path, "r") as f:
         genotype = from_str(f.read())
 
@@ -216,7 +215,7 @@ def train(
         optimizer.zero_grad()
         # torch.nn.utils.clip_grad_norm_(model.parameters(), 1)
         preds = model(X)
-        loss = criterion(preds, y) 
+        loss = criterion(preds, y)
         loss_meter.update(loss.item(), N)
         loss.backward()
         grad_norm = utils.grad_norm(model)
@@ -237,8 +236,7 @@ def train(
                     grad_norm=grad_norm,
                 )
             )
-        
-  
+
         writer.add_scalar("tune/train/loss", loss_meter.avg, cur_step)
         writer.add_scalar("tune/train/grad_norm", grad_norm, cur_step)
 
@@ -306,7 +304,7 @@ def validate(
 
 if __name__ == "__main__":
     VAL_CFG_PATH = "./sr_models/valsets4x.yaml"
-    CFG_PATH = "./configs/quant_config.yaml"
+    CFG_PATH = "./configs/fp_config.yaml"
     cfg = omg.load(CFG_PATH)
     cfg, writer, logger, log_handler = train_setup(cfg)
     run_train(cfg, writer, logger, log_handler)

@@ -103,59 +103,32 @@ def from_str(s):
 
 def to_dag_sr(C_fixed, gene, gene_type, c_in=3, c_out=3, scale=4):
     """generate discrete ops from gene"""
-    if gene_type == "body":
-        dag = nn.ModuleList()
-        for i, (op_name, bit) in enumerate(gene):
+    dag = []
+    for i, (op_name, bit) in enumerate(gene):
+        C_in, C_out, = (
+            C_fixed,
+            C_fixed,
+        )
+        if i == 0 and gene_type == "head":
+            C_in = c_in
+        elif i + 1 == len(gene) and gene_type == "tail":
+            C_out = c_out
+        elif i == 0 and gene_type == "tail":
+            C_in = c_in
 
-            # one before last
-            if i + 1 == len(gene) - 1:
-                C_in = C_fixed // 2
-                C_out = C_fixed // 2
+        elif gene_type == "upsample":
+            C_in = C_fixed
+            C_out = 3 * (scale**2)
+        else:
+            C_in = C_fixed
+            C_out = C_fixed
 
-            # last
-            elif i + 1 == len(gene):
-                C_in = (C_fixed // 2) * (len(gene) - 1)
-                C_out = C_fixed
-
-            elif i != 0:
-                C_in = C_fixed // 2
-                C_out = C_fixed
-
-            else:
-                C_in = C_fixed
-                C_out = C_fixed
-
-            print(i + 1, gene_type, op_name, C_in, C_out, C_fixed, bit)
-            op = ops_sr.OPS[op_name](
-                C_in, C_out, [bit], C_fixed, 1, affine=False, shared=False
-            )
-            dag.append(op)
-
-        return dag
-
-    else:
-        dag = []
-        for i, (op_name, bit) in enumerate(gene):
-            if i == 0 and gene_type == "head":
-                C_in = c_in
-                C_out = C_fixed
-            elif gene_type == "tail":
-                C_in = c_in
-                C_out = c_out
-            elif gene_type == "upsample":
-                C_in = C_fixed
-                C_out = 3 * (scale**2)
-            else:
-                C_in = C_fixed
-                C_out = C_fixed
-
-            print(i + 1, gene_type, op_name, C_in, C_out, C_fixed, bit)
-            op = ops_sr.OPS[op_name](
-                C_in, C_out, [bit], C_fixed, 1, affine=False, shared=False
-            )
-            dag.append(op)
-
-        return nn.Sequential(*dag)
+        print(gene_type, op_name, C_in, C_out, C_fixed, bit)
+        op = ops_sr.OPS[op_name](
+            C_in, C_out, [bit], C_fixed, 1, affine=False, shared=False
+        )
+        dag.append(op)
+    return nn.Sequential(*dag)
 
 
 def parse_sr(alpha, name, bits=[2], primitives=None):

@@ -1,5 +1,4 @@
 """ CNN cell for architecture search """
-import torch
 import torch.nn as nn
 from sr_models import quant_ops as ops
 from sr_models.ADN import AdaptiveNormalization as ADN
@@ -9,20 +8,27 @@ def summer(values, increments):
     return (v + i for v, i in zip(values, increments))
 
 
-class ResidualSplitter(nn.Module):
-    def __init__(self, body, skip_mode=True):
-        super(ResidualSplitter, self).__init__()
+class Residual(nn.Module):
+    def __init__(self, skip, body, skip_mode=True):
+        super(Residual, self).__init__()
+        self.skip = skip
         self.body = body
         self.adn = ADN(36, skip_mode=skip_mode)
 
-    def forward(self, x, b_weights):
+    def forward(self, x, b_weights, s_weights):
         def func(x):
-            return self.body(x, b_weights)
+            return self.skip(x, s_weights) + self.body(x, b_weights)
 
         return self.adn(x, func, x)
 
     def fetch_info(self, b_weights, s_weights):
-        flops, memory = self.body.fetch_info(b_weights)
+        flops = 0
+        memory = 0
+        for layer, weights in zip(
+            (self.body, self.skip), (b_weights, s_weights)
+        ):
+
+            flops, memory = summer((flops, memory), layer.fetch_info(weights))
         return flops, memory
 
 
@@ -42,93 +48,45 @@ class CommonBlock(nn.Module):
         Creates list of blocks of specific gene_type.
         """
         super(CommonBlock, self).__init__()
-        self.c_fixed = c_fixed
+
         self.net = nn.ModuleList()
         self.name = gene_type
-        if gene_type == "body":
-            for i in range(num_layers):
-                # one before last
-                if i + 1 == num_layers - 1:
-                    C_in = c_fixed // 2
-                    C_out = c_fixed // 2
+        for i in range(num_layers):
+            (
+                c_in,
+                c_out,
+            ) = (c_fixed, c_fixed)
 
-                # last
-                elif i + 1 == num_layers:
-                    C_in = (c_fixed // 2) * (num_layers - 1)
-                    C_out = c_fixed
+            if i == 0 and gene_type == "head":
+                c_in = c_init
+            elif gene_type == "tail":
+                if (i + 1) == num_layers:
+                    c_out = c_init
+                if i == 0:
+                    c_in = c_init
+            elif gene_type == "upsample":
+                c_in = c_fixed
+                c_out = 3 * (scale**2)
+            else:
+                c_in = c_fixed
+                c_out = c_fixed
 
-                elif i != 0:
-                    C_in = c_fixed // 2
-                    C_out = c_fixed
-
-                else:
-                    C_in = c_fixed
-                    C_out = c_fixed
-
-                print(i + 1, gene_type, C_in, C_out)
-                self.net.append(
-                    ops.MixedOp(
-                        C_in,
-                        C_out,
-                        bits,
-                        c_fixed,
-                        gene_type,
-                        quant_noise=quant_noise,
-                        primitives=primitives,
-                    )
+            self.net.append(
+                ops.MixedOp(
+                    c_in,
+                    c_out,
+                    bits,
+                    c_fixed,
+                    gene_type,
+                    quant_noise=quant_noise,
+                    primitives=primitives,
                 )
-
-        else:
-            for i in range(num_layers):
-                if i == 0 and gene_type == "head":
-                    C_in = c_init
-                    C_out = c_fixed
-                elif gene_type == "tail":
-                    C_in = c_init
-                    C_out = c_init
-                elif gene_type == "upsample":
-                    C_in = c_fixed
-                    C_out = 3 * (scale**2)
-                else:
-                    C_in = c_fixed
-                    C_out = c_fixed
-
-                print(i + 1, gene_type, C_in, C_out)
-                self.net.append(
-                    ops.MixedOp(
-                        C_in,
-                        C_out,
-                        bits,
-                        c_fixed,
-                        gene_type,
-                        quant_noise=quant_noise,
-                        primitives=primitives,
-                    )
-                )
+            )
 
     def forward(self, x, alphas):
-        if self.name == "body":
-            distilled_list = []
-            for i, (c, a_w) in enumerate(zip(self.net, alphas)):
-                if (i + 1) != len(self.net):
-                    # device  = x.device
-                    x = c(x, a_w)
-
-                    # if one before last
-                    if (i + 1) == len(self.net) - 1:
-                        distilled_list.append(x)
-                    else:
-                        distilled, x = torch.split(
-                            x, (self.c_fixed // 2, self.c_fixed // 2), dim=1
-                        )
-                        distilled_list.append(distilled)
-
-            z = torch.cat(distilled_list, dim=1)
-            return c(z, a_w)
-        else:
-            for layer, a_w in zip(self.net, alphas):
-                x = layer(x, a_w)
-            return x
+        for layer, a_w in zip(self.net, alphas):
+            x = layer(x, a_w)
+        return x
 
     def fetch_info(self, alphas):
         flops = 0
@@ -191,8 +149,16 @@ class SearchArch(nn.Module):
                 quant_noise=quant_noise,
                 primitives=primitives,
             )
-
-            self.body.append(ResidualSplitter(b, skip_mode=skip_mode))
+            s = CommonBlock(
+                c_fixed,
+                c_init,
+                bits,
+                arch_pattern["skip"],
+                gene_type="skip",
+                quant_noise=quant_noise,
+                primitives=primitives,
+            )
+            self.body.append(Residual(s, b, skip_mode=skip_mode))
 
         self.upsample = CommonBlock(
             c_fixed,
@@ -224,7 +190,7 @@ class SearchArch(nn.Module):
 
         def func_body(x):
             for cell in self.body:
-                x = cell(x, alphas["body"])
+                x = cell(x, alphas["body"], alphas["skip"])
             return x
 
         x = self.adn_one(x, func_body, init)
