@@ -111,7 +111,7 @@ def run_train(cfg, writer, logger, log_handler):
         skip_mode=cfg.arch.skip_mode,
     )
     # model = RFDN()
-    # print(model)
+    logger.info(model)
     model.to(device)
     # model size
     mb_params = utils.param_size(model)
