@@ -4,28 +4,24 @@ Specify detailed search space for the architechture.
 import torch.nn as nn
 from collections import namedtuple
 from sr_models import quant_ops as ops_sr
+from sr_models.RFDN.block import ESA
 
 Genotype_SR = namedtuple("Genotype_SR", "head body tail skip upsample")
 
 
 body = [
-    "skip_connect",
+    # "skip_connect",
     "simple_1x1",
     "simple_3x3",
     "simple_5x5",
-    
-    "simple_1x1_grouped_3",
-    "simple_3x3_grouped_3",
-    "simple_5x5_grouped_3",
-    
-    "simple_3x3_grouped_full",
-    "simple_5x5_grouped_full",
-    
-    "simple_3x3_d2",
-    "simple_3x3_grouped_3_d2",
 
-    "conv_3x1_1x3",
-    "conv_5x1_1x5",
+    "growth1_1x1",
+    "growth1_3x3",
+    "growth1_5x5",
+
+    "simple_1x1_grouped_2",
+    "simple_3x3_grouped_2",
+    "simple_5x5_grouped_2",
 ]
 
 head = [
@@ -34,35 +30,21 @@ head = [
     "simple_3x3",
     "simple_5x5",
     
-    "simple_1x1_grouped_3",
-    "simple_3x3_grouped_3",
-    "simple_5x5_grouped_3",
-    
-    "simple_3x3_grouped_full",
-    "simple_5x5_grouped_full",
-    
-    "simple_3x3_d2",
-    "simple_3x3_grouped_3_d2",
-
-    "conv_3x1_1x3",
-    "conv_5x1_1x5",
+    "growth1_1x1",
+    "growth1_3x3",
+    "growth1_5x5",
 ]
 
 tail = [
-    "skip_connect",
+    # "skip_connect",
+
     "simple_1x1",
     "simple_3x3",
     "simple_5x5",
     
-    "simple_1x1_grouped_3",
-    "simple_3x3_grouped_3",
-    "simple_5x5_grouped_3",
-    
-    "simple_3x3_d2",
-    "simple_3x3_grouped_3_d2",
-
-    "conv_3x1_1x3",
-    "conv_5x1_1x5",
+    "growth1_1x1",
+    "growth1_3x3",
+    "growth1_5x5",
 ]
 
 upsample = [
@@ -70,34 +52,28 @@ upsample = [
     "simple_3x3",
     "simple_5x5",
     
-    "simple_1x1_grouped_3",
-    "simple_3x3_grouped_3",
-    "simple_5x5_grouped_3",
-    
-    "simple_3x3_d2",
-    "simple_3x3_grouped_3_d2",
+    "growth1_1x1",
+    "growth1_3x3",
+    "growth1_5x5",
 
-    "conv_3x1_1x3",
-    "conv_5x1_1x5",
+    "simple_1x1_grouped_2",
+    "simple_3x3_grouped_2",
+    "simple_5x5_grouped_2",
 ]
 
 skip = [
+    # "skip_connect",
     "simple_1x1",
     "simple_3x3",
     "simple_5x5",
     
-    "simple_1x1_grouped_3",
-    "simple_3x3_grouped_3",
-    "simple_5x5_grouped_3",
-    
-    "simple_3x3_grouped_full",
-    "simple_5x5_grouped_full",
-    
-    "simple_3x3_d2",
-    "simple_3x3_grouped_3_d2",
+    "growth1_1x1",
+    "growth1_3x3",
+    "growth1_5x5",
 
-    "conv_3x1_1x3",
-    "conv_5x1_1x5",
+    "simple_1x1_grouped_2",
+    "simple_3x3_grouped_2",
+    "simple_5x5_grouped_2",
 ]
 
 PRIMITIVES_SR = {
@@ -130,6 +106,8 @@ def to_dag_sr(C_fixed, gene, gene_type, c_in=3, c_out=3, scale=4):
         elif gene_type == "upsample":
             C_in = C_fixed
             C_out = 3 * (scale**2)
+        elif (gene_type == "skip") or (i == len(gene) - 1 and gene_type == "body"):
+            C_out = C_fixed // 2
         else:
             C_in = C_fixed
             C_out = C_fixed

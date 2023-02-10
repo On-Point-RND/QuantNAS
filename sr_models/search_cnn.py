@@ -44,14 +44,27 @@ class SearchCNNController(nn.Module):
 
         self.alphas = dict()
         for name in self.alphas_names:
-            params = nn.ParameterList()
-            for _ in range(arch_pattern[name]):
-                params.append(
-                    nn.Parameter(
-                        torch.zeros(len(bits) * len(self.primitives[name]))
+            if name in ["body", "skip"]:
+                body_params = []
+                for _ in range(body_cells):
+                    params = nn.ParameterList()
+                    for _ in range(arch_pattern[name]):
+                        params.append(
+                            nn.Parameter(
+                                torch.zeros(len(bits) * len(self.primitives[name]))
+                            )
+                        )
+                    body_params += [params]
+                self.alphas[name] = body_params
+            else:
+                params = nn.ParameterList()
+                for _ in range(arch_pattern[name]):
+                    params.append(
+                        nn.Parameter(
+                            torch.zeros(len(bits) * len(self.primitives[name]))
+                        )
                     )
-                )
-            self.alphas[name] = params
+                self.alphas[name] = params
 
         self.alphaselector = alphaSelector(name=alpha_selector)
         self.softmax = alphaSelector(name="softmax")
@@ -59,8 +72,13 @@ class SearchCNNController(nn.Module):
         # setup alphass list
         self._alphas = nn.ParameterList()
         for name in self.alphas:
-            for p in self.alphas[name].parameters():
-                self._alphas.append(p)
+            if name in ["body", "skip"]:
+                for i in range(body_cells):
+                    for p in self.alphas[name][i].parameters():
+                        self._alphas.append(p)
+            else:
+                for p in self.alphas[name].parameters():
+                    self._alphas.append(p)
 
         self.net = SearchArch(
             c_init,
@@ -77,9 +95,14 @@ class SearchCNNController(nn.Module):
     def get_alphas(self, func):
         alphas_projected = dict()
         for name in self.alphas_names:
-            alphas_projected[name] = [
-                func(alphas, self.temp, dim=-1) for alphas in self.alphas[name]
-            ]
+            if name in ["body", "skip"]:
+                alphas_projected[name] = [[
+                    func(alphas, self.temp, dim=-1) for alphas in self.alphas[name][i]
+                ] for i in range(self.body_cells)]
+            else:
+                alphas_projected[name] = [
+                    func(alphas, self.temp, dim=-1) for alphas in self.alphas[name]
+                ]
         return alphas_projected
 
     def forward(self, x, temperature=1, stable=False):
@@ -109,46 +132,41 @@ class SearchCNNController(nn.Module):
             org_formatters.append(handler.formatter)
             handler.setFormatter(logging.Formatter("%(message)s"))
 
-        logger.info("####### alphas #######")
-        weight_alphas = self.get_alphas(self.softmax)
-        for name in weight_alphas:
-            logger.info(f"# alphas - {name}")
-            for i, alphas in enumerate(weight_alphas[name]):
+        def log_alpha_set(part_name, log_name, alpha_set):
+            logger.info(f"# alphas - {part_name}")
+            for i, alphas in enumerate(alpha_set):
                 logger.info(alphas)
                 alpha_names = []
-                for op_name in self.primitives[name]:
+                for op_name in self.primitives[part_name]:
                     for bit in self.bits:
                         alpha_names += [f"{op_name}_{bit}"]
                 assert len(alpha_names) == len(
                     alphas.detach().cpu().numpy().tolist()
                 )
                 writer.add_scalars(
-                    f"alphas_softmax/{name}.{i}",
+                    f"{log_name}.{i}",
                     dict(
                         zip(alpha_names, alphas.detach().cpu().numpy().tolist())
                     ),
                     epoch,
                 )
 
+        logger.info("####### alphas #######")
+        weight_alphas = self.get_alphas(self.softmax)
+        for name in weight_alphas:
+            if name in ["body", "skip"]:
+                for i in range(self.body_cells):
+                    log_alpha_set(name, f"alphas_softmax/{name}.{i}", weight_alphas[name][i])
+            else:
+                log_alpha_set(name, f"alphas_softmax/{name}", weight_alphas[name])
+
         logger.info("# alphas_original #")
         for name in self.alphas:
-            logger.info(f"# alphas - {name}")
-            for i, alphas in enumerate(self.alphas[name]):
-                logger.info(alphas)
-                alpha_names = []
-                for op_name in self.primitives[name]:
-                    for bit in self.bits:
-                        alpha_names += [f"{op_name}_{bit}"]
-                assert len(alpha_names) == len(
-                    alphas.detach().cpu().numpy().tolist()
-                )
-                writer.add_scalars(
-                    f"alphas_orig/{name}.{i}",
-                    dict(
-                        zip(alpha_names, alphas.detach().cpu().numpy().tolist())
-                    ),
-                    epoch,
-                )
+            if name in ["body", "skip"]:
+                for i in range(self.body_cells):
+                    log_alpha_set(name, f"alphas_orig/{name}.{i}", self.alphas[name][i])    
+            else:
+                log_alpha_set(name, f"alphas_orig/{name}", self.alphas[name])
 
         # restore formats
         for handler, formatter in zip(logger.handlers, org_formatters):
@@ -157,9 +175,14 @@ class SearchCNNController(nn.Module):
     def genotype(self):
         gene = dict()
         for name in self.alphas_names:
-            gene[name] = gt.parse_sr(
-                self.alphas[name], name, self.bits, self.primitives
-            )
+            if name in ["body", "skip"]:
+                gene[name] = [gt.parse_sr(
+                    self.alphas[name][i], name, self.bits, self.primitives
+                ) for i in range(self.body_cells)]
+            else:
+                gene[name] = gt.parse_sr(
+                    self.alphas[name], name, self.bits, self.primitives
+                )
         return gt.Genotype_SR(**gene)
 
     def weights(self):

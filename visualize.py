@@ -39,6 +39,8 @@ def plot_sr(genotype, file_path, caption=None):
     node_n = 0
     for name in parts:
         layers = getattr(genotype, name)
+        if name in ["body", "skip"]: 
+            layers = layers[0]
         if name == "body":
             body_start = node_n + 1
             body_end = node_n + len(layers) + 1

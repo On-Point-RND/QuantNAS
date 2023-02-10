@@ -129,7 +129,7 @@ if __name__ == "__main__":
     valid_cfg = omg.load(CFG_PATH)
     run_name = "TEST_2"
     genotype_path = "/home/dev/2021_09/QuanToaster/genotype_example_sr.gen"
-    weights_path = None #"/home/dev/data_main/LOGS/SR/11_2022/TUNE/Basic_With_ESA-2022-11-22-13/best.pth.tar"
+    weights_path = None #"/home/dev/data_main/LOGS/SR/11_2022/The_best_i_can/TUNE_v1.0-2022-11-29-17/best.pth.tar"
     log_dir = "/home/dev/data_main/LOGS/SR/11_2022/TUNE/"
     save_dir = os.path.join(log_dir, run_name)
     os.makedirs(save_dir, exist_ok=True)
@@ -143,18 +143,19 @@ if __name__ == "__main__":
     logger = utils.get_logger(save_dir + "/validation_log.txt")
     logger.info(genotype)
     
-    # model = RFDN()
+    # model = RFDN(nf=48)
     # model.to(device)
 
     model = get_model(
         weights_path,
         device,
         genotype,
-        c_fixed=36,
+        c_fixed=48,
         channels=3,
         scale=4,
-        body_cells=3,
+        body_cells=4,
         skip_mode=True
     )
-    # print(count_Flops(model))
-    dataset_loop(valid_cfg, model, logger, save_dir, device)
+    # dataset_loop(valid_cfg, model, logger, save_dir, device)
+    print(model)
+    logger.info(count_Flops(model))

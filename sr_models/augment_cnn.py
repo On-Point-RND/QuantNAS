@@ -4,6 +4,7 @@ import torch.nn as nn
 import genotypes as gt
 from sr_models.quant_conv_lsq import QAConv2d
 from sr_models.ADN import AdaptiveNormalization as ADN
+from sr_models.RFDN.block import ESA
 
 
 def summer(values, increments):
@@ -11,26 +12,32 @@ def summer(values, increments):
 
 
 class Residual(nn.Module):
-    def __init__(self, skip, body, skip_mode=True):
+    def __init__(self, skip, body, c_out, skip_mode=True):
         super().__init__()
         self.skip = skip
+        self.cum_channels = nn.Conv2d((c_out // 2) * (len(body)), c_out, 1) 
         self.body = body
         self.skip_mode = skip_mode
 
-        self.adn = ADN(36, skip_mode=skip_mode)
+        self.esa = ESA(c_out)
 
     def forward(self, x):
         def func(x):
-            return self.skip(x) + self.body(x)
+            return self.body_split(x)
 
-        return self.adn(x, func, x)
+        return self.esa(func(x)) 
 
-    def fetch_weighted_info(self):
-        flops = 0
-        memory = 0
-        for layer in (self.skip, self.body):
-            flops, memory = summer((flops, memory), layer.fetch_info())
-        return flops, memory
+    def body_split(self, x):
+        splits = []
+        for i in range(len(self.body)):
+            if i < len(self.body) - 1:
+                splits += [self.skip[i](x)]
+                x = x + self.body[i](x)
+            else:
+                x = self.body[i](x) 
+        splits += [x]
+        output = self.cum_channels(torch.cat(splits, dim=1))
+        return output
 
 
 class AugmentCNN(nn.Module):
@@ -54,14 +61,15 @@ class AugmentCNN(nn.Module):
         )
 
         self.body = nn.ModuleList()
-        for _ in range(blocks):
+        for i in range(blocks):
             b = gt.to_dag_sr(
-                self.c_fixed, genotype.body, gene_type="body", c_in=c_in
+                self.c_fixed, genotype.body[i], gene_type="body", c_in=c_in
             )
             s = gt.to_dag_sr(
-                self.c_fixed, genotype.skip, gene_type="skip", c_in=c_in
+                self.c_fixed, genotype.skip[i], gene_type="skip", c_in=c_in
             )
-            self.body.append(Residual(s, b, skip_mode=skip_mode))
+            assert len(genotype.skip[i]) == len(genotype.body[i]) - 1
+            self.body.append(Residual(s, b, c_out=self.c_fixed, skip_mode=skip_mode))
 
         upsample = gt.to_dag_sr(
             self.c_fixed, genotype.upsample, gene_type="upsample"
@@ -75,22 +83,25 @@ class AugmentCNN(nn.Module):
 
         self.adn_one = ADN(36, skip_mode=skip_mode)
         self.adn_two = ADN(3, skip_mode=skip_mode)
+        self.c = nn.Conv2d(self.c_fixed * blocks, self.c_fixed, 1, padding="same")
+        self.c2 = nn.Conv2d(self.c_fixed, self.c_fixed, 3, padding="same")
 
     def forward(self, x):
 
-        init = self.head(x)
-        x = init
+        x = x.repeat(1, self.c_fixed // 3, 1, 1)
+        head_skip = x
 
         def func(x):
-            # xs = 0
+            concat_skips = []
             for cell in self.body:
                 x = cell(x)
-                # xs += x
-            return x
+                concat_skips += [x]
+            concat_skips = torch.cat(concat_skips, dim=1)
+            x = torch.nn.functional.leaky_relu(self.c(concat_skips), negative_slope=0.05)
+            return self.c2(x)
 
-        x = self.upsample(self.adn_one(x, func, init))
-        #tail = self.adn(_two(x, self.tail, x)
-        return self.tail(x) + x
+        x = self.upsample(func(x) + head_skip) 
+        return x + self.tail(x)
 
     def set_fp(self):
         if self.quant_mode == True:

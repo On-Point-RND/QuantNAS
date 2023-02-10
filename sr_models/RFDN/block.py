@@ -6,7 +6,7 @@ import torch.nn.functional as F
 
 def conv_layer(in_channels, out_channels, kernel_size, stride=1, dilation=1, groups=1):
     padding = int((kernel_size - 1) / 2) * dilation
-    return nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding=padding, bias=True, dilation=dilation,
+    return nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding=padding, bias=False, dilation=dilation,
                      groups=groups)
 
 
@@ -40,7 +40,7 @@ def get_valid_padding(kernel_size, dilation):
     return padding
 
 
-def conv_block(in_nc, out_nc, kernel_size, stride=1, dilation=1, groups=1, bias=True,
+def conv_block(in_nc, out_nc, kernel_size, stride=1, dilation=1, groups=1, bias=False,
                pad_type='zero', norm_type=None, act_type='relu'):
     padding = get_valid_padding(kernel_size, dilation)
     p = pad(pad_type, padding) if pad_type and pad_type != 'zero' else None

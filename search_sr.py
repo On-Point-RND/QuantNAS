@@ -85,10 +85,12 @@ def run_search(cfg, writer, logger, log_handler):
         cfg.search.epochs,
         type=cfg.search.sparse_type,
         coef=cfg.search.sparse_coef,
+        warm_up=cfg.search.warm_up,
     )
 
     criterion.init_alpha(model.alphas_weights)
     model = model.to(device)
+    logger.info(model)
 
     flops_loss = FlopsLoss(model.n_ops)
 
@@ -230,6 +232,7 @@ def run_search(cfg, writer, logger, log_handler):
             "loss/search", {"val": best_score, "train": score_train}, epoch
         )
         writer.add_scalar("search/train/temperature", temperature, epoch)
+        writer.add_scalar("search/train/entropy_coef", criterion.weight1 * criterion.weight2 * criterion.coef, epoch)
 
         logger.info("Final best LOSS = {:.3f}".format(best_score))
         logger.info("Best Genotype = {}".format(best_genotype))
@@ -514,7 +517,7 @@ class FlopsLoss:
 
 
 class SparseCrit(nn.Module):
-    def __init__(self, criterion, epochs, type="none", coef=0.1) -> None:
+    def __init__(self, criterion, epochs, type="none", coef=0.1, warm_up=0) -> None:
         super().__init__()
         assert type in ["none", "entropy", "l1", "l1_softmax"]
         print("SPARSITY TYPE:", type)
@@ -522,6 +525,7 @@ class SparseCrit(nn.Module):
         self.coef = coef
         self.epochs = epochs
         self.type = type
+        self.warm_up = warm_up
 
     def init_alpha(self, alphas):
         self.alphas = alphas
@@ -557,12 +561,12 @@ class SparseCrit(nn.Module):
             return res if not get_initial else (res, loss1)
 
     def update(self, epoch):
-        warm_up = self.epochs // 4
-        self.weight1 = 1 / (self.epochs - 1) * (epoch)
+        warm_up = (self.epochs - self.warm_up) // 4
+        self.weight1 = 1 / (self.epochs - 1 - self.warm_up) * (epoch - self.warm_up)
         self.weight2 = (
             0
-            if epoch < warm_up
-            else math.log(epoch - warm_up + 2, self.epochs - warm_up + 1)
+            if (epoch - self.warm_up) < warm_up
+            else math.log(epoch - warm_up - self.warm_up + 2, self.epochs - warm_up - self.warm_up + 1)
         )
 
 
@@ -579,18 +583,27 @@ def log_weigths_hist(model, tb_logger, epoch, log_alpha=False):
                     # )
     else:
         for name in model.alphas:
-            for i, alpha in enumerate(model.alphas[name]):
-                tb_logger.add_histogram(
-                    f"weights_alpha_grad/{name}.{i}",
-                    alpha.grad.cpu().numpy(),
-                    epoch,
-                )
+            if name in ["body", "skip"]:
+                for k in range(model.body_cells):
+                    for i, alpha in enumerate(model.alphas[name][k]):
+                        tb_logger.add_histogram(
+                            f"weights_alpha_grad/{name}.{k}.{i}",
+                            alpha.grad.cpu().numpy(),
+                            epoch,
+                        )
+            else:
+                for i, alpha in enumerate(model.alphas[name]):
+                    tb_logger.add_histogram(
+                        f"weights_alpha_grad/{name}.{i}",
+                        alpha.grad.cpu().numpy(),
+                        epoch,
+                    )
 
 
 def grad_norm(model, tb_logger, epoch):
     norms = {}
     norms["body"] = []
-    norms["head"] = []
+    # norms["head"] = []
     norms["tail"] = []
     for name, p in model.named_parameters():
         if ("body" in name) or ("head" in name) or ("tail" in name):
@@ -599,12 +612,12 @@ def grad_norm(model, tb_logger, epoch):
                 if "body" in name:
                     norms["body"] += [param_norm.item()]
 
-                if "head" in name:
-                    norms["head"] += [param_norm.item()]
+                # if "head" in name:
+                #     norms["head"] += [param_norm.item()]
 
                 if "tail" in name:
                     norms["tail"] += [param_norm.item()]
-            else:
+            elif not ("head" in name):
                 print(f"NONE GRAD in {name}")
     for k in norms:
         norms[k] = np.mean(norms[k]) if norms[k] != [] else 0
@@ -622,7 +635,7 @@ def grad_norm(model, tb_logger, epoch):
 
     net = model.net
     blocks = {
-        "head": net.head,
+        # "head": net.head,
         "upsample": net.upsample,
         "tail": net.tail,
     }

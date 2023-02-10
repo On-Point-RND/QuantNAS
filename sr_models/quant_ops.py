@@ -69,6 +69,78 @@ OPS = {
         shared=shared,
         quant_noise=quant_noise,
     ),
+    "3x3_increase_2": lambda C_in, C_out, bits, C_fixed, stride, affine, shared, quant_noise=False: IncreaseConv(
+        C_in,
+        C_out,
+        bits,
+        C_fixed,
+        3,
+        stride,
+        affine=affine,
+        shared=shared,
+        quant_noise=quant_noise,
+        increase_rate=2,
+    ),
+    "1x1_increase_2": lambda C_in, C_out, bits, C_fixed, stride, affine, shared, quant_noise=False: IncreaseConv(
+        C_in,
+        C_out,
+        bits,
+        C_fixed,
+        1,
+        stride,
+        affine=affine,
+        shared=shared,
+        quant_noise=quant_noise,
+        increase_rate=2,
+    ),
+    "5x5_increase_2": lambda C_in, C_out, bits, C_fixed, stride, affine, shared, quant_noise=False: IncreaseConv(
+        C_in,
+        C_out,
+        bits,
+        C_fixed,
+        5,
+        stride,
+        affine=affine,
+        shared=shared,
+        quant_noise=quant_noise,
+        increase_rate=2,
+    ),
+    "3x3_decrease_2": lambda C_in, C_out, bits, C_fixed, stride, affine, shared, quant_noise=False: DecreaseConv(
+        C_in,
+        C_out,
+        bits,
+        C_fixed,
+        3,
+        stride,
+        affine=affine,
+        shared=shared,
+        quant_noise=quant_noise,
+        decrease_rate=2,
+    ),
+    "1x1_decrease_2": lambda C_in, C_out, bits, C_fixed, stride, affine, shared, quant_noise=False: DecreaseConv(
+        C_in,
+        C_out,
+        bits,
+        C_fixed,
+        1,
+        stride,
+        affine=affine,
+        shared=shared,
+        quant_noise=quant_noise,
+        decrease_rate=2,
+    ),
+    "5x5_decrease_2": lambda C_in, C_out, bits, C_fixed, stride, affine, shared, quant_noise=False: DecreaseConv(
+        C_in,
+        C_out,
+        bits,
+        C_fixed,
+        5,
+        stride,
+        affine=affine,
+        shared=shared,
+        quant_noise=quant_noise,
+        decrease_rate=2,
+    ),
     "simple_3x3_grouped_full": lambda C_in, C_out, bits, C_fixed, stride, affine, shared, quant_noise=False: SimpleConv(
         C_in,
         C_out,
@@ -93,38 +165,38 @@ OPS = {
         shared=shared,
         quant_noise=quant_noise,
     ),
-    "simple_1x1_grouped_3": lambda C_in, C_out, bits, C_fixed, stride, affine, shared, quant_noise=False: SimpleConv(
+    "simple_1x1_grouped_2": lambda C_in, C_out, bits, C_fixed, stride, affine, shared, quant_noise=False: SimpleConv(
         C_in,
         C_out,
         bits,
         C_fixed,
         1,
         stride,
-        groups=3,
+        groups=2,
         affine=affine,
         shared=shared,
         quant_noise=quant_noise,
     ),
-    "simple_3x3_grouped_3": lambda C_in, C_out, bits, C_fixed, stride, affine, shared, quant_noise=False: SimpleConv(
+    "simple_3x3_grouped_2": lambda C_in, C_out, bits, C_fixed, stride, affine, shared, quant_noise=False: SimpleConv(
         C_in,
         C_out,
         bits,
         C_fixed,
         3,
         stride,
-        groups=3,
+        groups=2,
         affine=affine,
         shared=shared,
         quant_noise=quant_noise,
     ),
-    "simple_5x5_grouped_3": lambda C_in, C_out, bits, C_fixed, stride, affine, shared, quant_noise=False: SimpleConv(
+    "simple_5x5_grouped_2": lambda C_in, C_out, bits, C_fixed, stride, affine, shared, quant_noise=False: SimpleConv(
         C_in,
         C_out,
         bits,
         C_fixed,
         5,
         stride,
-        groups=3,
+        groups=2,
         affine=affine,
         shared=shared,
         quant_noise=quant_noise,
@@ -154,9 +226,192 @@ OPS = {
         quant_noise=quant_noise,
         dilation=2
     ),
-    
+    "growth2_3x3": lambda C_in, C_out, bits, C_fixed, stride, affine, shared, quant_noise=False: GrowthConv(
+        C_in,
+        C_out,
+        bits,
+        C_fixed,
+        3,
+        stride,
+        groups=1,
+        affine=affine,
+        shared=shared,
+        growth=2,
+        quant_noise=quant_noise,
+    ),
+    "growth1_1x1": lambda C_in, C_out, bits, C_fixed, stride, affine, shared, quant_noise=False: GrowthConv(
+        C_in,
+        C_out,
+        bits,
+        C_fixed,
+        1,
+        stride,
+        groups=1,
+        affine=affine,
+        shared=shared,
+        growth=1,
+        quant_noise=quant_noise,
+    ),
+    "growth1_3x3": lambda C_in, C_out, bits, C_fixed, stride, affine, shared, quant_noise=False: GrowthConv(
+        C_in,
+        C_out,
+        bits,
+        C_fixed,
+        3,
+        stride,
+        groups=1,
+        affine=affine,
+        shared=shared,
+        growth=1,
+        quant_noise=quant_noise,
+    ),
+    "growth1_5x5": lambda C_in, C_out, bits, C_fixed, stride, affine, shared, quant_noise=False: GrowthConv(
+        C_in,
+        C_out,
+        bits,
+        C_fixed,
+        5,
+        stride,
+        1,
+        groups=1,
+        affine=affine,
+        shared=shared,
+        growth=1,
+        quant_noise=quant_noise,
+    ),
 }
 
+class IncreaseConv(BaseConv):
+    """Standard conv
+    ReLU - Conv - BN
+    """
+
+    def __init__(
+        self,
+        C_in,
+        C_out,
+        bits,
+        C_fixed,
+        kernel_size,
+        stride,
+        dilation=1,
+        groups=1,
+        affine=False,
+        shared=False,
+        quant_noise=False,
+        increase_rate=2
+    ):
+        super().__init__(shared=shared, quant_noise=quant_noise)
+        self.increase_rate = increase_rate
+        self.net = nn.Sequential(
+            # nn.BatchNorm2d(C_in),
+            self.conv_func(
+                in_channels=C_in * increase_rate,
+                out_channels=C_out,
+                bits=bits,
+                kernel_size=kernel_size,
+                stride=stride,
+                padding="same",
+                dilation=dilation,
+                groups=groups,
+                bias=affine,
+            )
+        )
+
+    def forward(self, x):
+        return self.net(x.repeat(1, self.increase_rate, 1, 1)) * torch.sum(self.alphas)
+
+class DecreaseConv(BaseConv):
+    """Standard conv
+    ReLU - Conv - BN
+    """
+
+    def __init__(
+        self,
+        C_in,
+        C_out,
+        bits,
+        C_fixed,
+        kernel_size,
+        stride,
+        dilation=1,
+        groups=1,
+        affine=False,
+        shared=False,
+        quant_noise=False,
+        decrease_rate=2
+    ):
+        super().__init__(shared=shared, quant_noise=quant_noise)
+        assert C_out % decrease_rate == 0, f"Wrong parameters C_out={C_out}, decrease_rate={decrease_rate}"
+        self.decrease_rate = decrease_rate
+        self.net = nn.Sequential(
+            # nn.BatchNorm2d(C_in),
+            self.conv_func(
+                in_channels=C_in,
+                out_channels=C_out // decrease_rate,
+                bits=bits,
+                kernel_size=kernel_size,
+                stride=stride,
+                padding="same",
+                dilation=dilation,
+                groups=groups,
+                bias=affine,
+            )
+        )
+
+    def forward(self, x):
+        return self.net(x).repeat(1, self.decrease_rate, 1, 1) * torch.sum(self.alphas)
+
+class GrowthConv(BaseConv):
+    """Standard conv -C_in -> C_in*growth -> C_in"""
+
+    def __init__(
+        self,
+        C_in,
+        C_out,
+        bits,
+        C_fixed,
+        kernel_size,
+        stride,
+        dilation=1,
+        groups=1,
+        affine=False,
+        growth=2,
+        shared=False,
+        quant_noise=False,
+    ):
+        super().__init__(shared=shared, quant_noise=quant_noise)
+        self.net = nn.Sequential(
+            # nn.BatchNorm2d(C_in),
+            self.conv_func(
+                in_channels=C_in,
+                out_channels=C_fixed * growth,
+                bits=bits,
+                kernel_size=kernel_size,
+                stride=stride,
+                padding="same",
+                dilation=dilation,
+                groups=groups,
+                bias=affine,
+            ),
+            # nn.BatchNorm2d(C_in),
+            self.conv_func(
+                in_channels=C_fixed * growth,
+                out_channels=C_out,
+                bits=bits,
+                kernel_size=kernel_size,
+                stride=stride,
+                padding="same",
+                dilation=dilation,
+                groups=groups,
+                bias=affine,
+            ),
+            # nn.ReLU(),
+            # nn.BatchNorm2d(C_out, affine=True),
+        )
+
+    def forward(self, x):
+        return self.net(x) * torch.sum(self.alphas)
 
 class SimpleConv(BaseConv):
     """Standard conv

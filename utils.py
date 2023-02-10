@@ -12,6 +12,15 @@ from skimage.metrics import peak_signal_noise_ratio, structural_similarity
 import shutil
 from PIL import Image
 
+def print_gen(gen):
+    out = ""
+    for i in gen._fields:
+            out += f"{i} = "
+            if type(getattr(gen, i)[0]) == list:
+                out += "\n\t" + "\n\t".join([str(s) for s in getattr(gen, i)]) + "\n"
+            else:
+                out += str(getattr(gen, i)) + "\n" 
+    print(out)
 
 def get_run_path(base_dir, run_name):
     run_dir = "{}-{}".format(run_name, time.strftime("%Y-%m-%d-%H"))

@@ -110,7 +110,7 @@ def run_train(cfg, writer, logger, log_handler):
         blocks=cfg.arch.body_cells,
         skip_mode=cfg.arch.skip_mode,
     )
-    # model = RFDN()
+    # model = RFDN(nf=48)
     logger.info(model)
     model.to(device)
     # model size
@@ -311,11 +311,12 @@ if __name__ == "__main__":
     CFG_PATH = "./configs/quant_config.yaml"
     cfg = omg.load(CFG_PATH)
     cfg, writer, logger, log_handler = train_setup(cfg)
+    utils.save_scripts(cfg.env.save_path)
+    with open(cfg.train.genotype_path, "r") as f:
+        genotype = genotypes.from_str(f.read())
     run_train(cfg, writer, logger, log_handler)
 
     # VALIDATE:
-    with open(cfg.train.genotype_path, "r") as f:
-        genotype = genotypes.from_str(f.read())
     weights_path = os.path.join(cfg.env.save_path, "best.pth.tar")
     logger = utils.get_logger(cfg.env.save_path + "/validation_log.txt")
     save_dir = os.path.join(cfg.env.save_path, "FINAL_VAL")
@@ -333,9 +334,10 @@ if __name__ == "__main__":
         body_cells=cfg.arch.body_cells,
         skip_mode=cfg.arch.skip_mode,
     )
-    # model = RFDN()
+    # model = RFDN(nf=48)
     # model_ = torch.load(weights_path, map_location="cpu")
     # model.load_state_dict(model_)
     # model.to(cfg.env.gpu)
     dataset_loop(valid_cfg, model, logger, save_dir, cfg.env.gpu)
-    # logger.info(f"FLOPS = {count_Flops(model)}")
+    logger.info(f"FLOPS = {count_Flops(model)}")
+    logger.info(cfg.env.run_name)

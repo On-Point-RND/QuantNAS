@@ -9,15 +9,15 @@ dataset:
 arch:
   bits: [32] #bitwidth options  
   channels: 3 # input channels
-  c_fixed: 36 # channels 
+  c_fixed: 48 # channels 
   scale: 4
   arch_pattern: # the number of blocks of different types
-      head: 2
-      skip: 1
-      tail: 2
-      body: 3
+      head: 1
+      skip: 3
+      tail: 1
+      body: 4
       upsample: 1
-  body_cells: 3  # body consists of several repetitions of identical blocks
+  body_cells: 4  # body consists of several repetitions of identical blocks
   skip_mode: True # If False -> use ADM
   # primitives:
     # head: ["simple_3x3", "simple_5x5", "simple_3x3_grouped_3", "simple_5x5_grouped_3"]
@@ -27,9 +27,9 @@ arch:
     # upsample: ["simple_5x5_grouped_3",simple_3x3_grouped_3, "simple_3x3", "simple_5x5"]
 
 env:
-  run_name: 'Dissection/No_Skips_Around_Conv' # name of the experiment. Ignored when 'batch_exp.py' is used.
+  run_name: 'SF_repeatHead_tailSkip' # name of the experiment. Ignored when 'batch_exp.py' is used.
   gpu: 0 # Device. Ignored when 'batch_exp.py' is used.
-  log_dir: /home/dev/data_main/LOGS/SR/11_2022/ # Directory for experiments output.
+  log_dir: /home/dev/data_main/LOGS/SR/11_2022/The_best_i_can/ # Directory for experiments output.
   im_dir: 'arch_images' # Subfolder of the experiment in which images of architectures are saved.
   workers: 4 
   seed : 777 
@@ -37,7 +37,7 @@ env:
  
 search:
   # From what epoch to start alpha updates
-  warm_up: 0
+  warm_up: 9
   # Path to pretrained SUPERNET.
   load_path: #/home/dev/data_main/LOGS/QUANT/SEARCH_PRETRAIN_V2-2021-12-10-17/best.pth.tar
   

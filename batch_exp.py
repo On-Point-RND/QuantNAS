@@ -16,9 +16,12 @@ import genotypes
 import utils
 import traceback
 
+from pthflops import count_Flops
+
+
 
 """
-EXAMPLE: python batch_exp.py -v 0 0.001 0.005 -d gumbel -r 3 -g 3 -c quant_config.yaml
+EXAMPLE: python batch_exp.py -v 0 0.0001 -d v0.0 -g 0 -c quant_config.yaml
 """
 
 VAL_CFG_PATH = "./sr_models/valsets4x.yaml"
@@ -142,6 +145,7 @@ def run_batch():
                 skip_mode=cfg.arch.skip_mode,
             )
             dataset_loop(valid_cfg, model, logger, save_dir, cfg.env.gpu)
+            logger.info(count_Flops(model))
 
 
 if __name__ == "__main__":

@@ -1,7 +1,9 @@
 """ CNN cell for architecture search """
 import torch.nn as nn
+import torch
 from sr_models import quant_ops as ops
 from sr_models.ADN import AdaptiveNormalization as ADN
+from sr_models.RFDN.block import ESA
 
 
 def summer(values, increments):
@@ -9,17 +11,30 @@ def summer(values, increments):
 
 
 class Residual(nn.Module):
-    def __init__(self, skip, body, skip_mode=True):
+    def __init__(self, skip, body, c_out, skip_mode=True):
         super(Residual, self).__init__()
         self.skip = skip
+        self.cum_channels = nn.Conv2d((c_out // 2) * (len(body.net)), c_out, 1)
         self.body = body
-        self.adn = ADN(36, skip_mode=skip_mode)
+        self.esa = ESA(c_out)
 
     def forward(self, x, b_weights, s_weights):
         def func(x):
-            return self.skip(x, s_weights) + self.body(x, b_weights)
+            return self.body_split(x, b_weights, s_weights) 
 
-        return self.adn(x, func, x)
+        return self.esa(func(x)) 
+
+    def body_split(self, x, b_alphas, s_alphas):
+        splits = []
+        for i in range(len(self.body.net)):
+            if i < len(self.body.net) - 1:
+                splits += [self.skip.net[i](x, s_alphas[i])]
+                x = x + self.body.net[i](x, b_alphas[i])
+            else:
+                x = self.body.net[i](x, b_alphas[i]) 
+        splits += [x]
+        output = self.cum_channels(torch.cat(splits, dim=1))
+        return output
 
     def fetch_info(self, b_weights, s_weights):
         flops = 0
@@ -65,6 +80,8 @@ class CommonBlock(nn.Module):
             elif gene_type == "upsample":
                 c_in = c_fixed
                 c_out = 3 * (scale**2)
+            elif (gene_type == "skip") or (i == num_layers - 1 and gene_type == "body"):
+                c_out = c_fixed // 2
             else:
                 c_in = c_fixed
                 c_out = c_fixed
@@ -151,12 +168,12 @@ class SearchArch(nn.Module):
                 c_fixed,
                 c_init,
                 bits,
-                arch_pattern["skip"],
+                arch_pattern["body"] - 1,
                 gene_type="skip",
                 quant_noise=quant_noise,
                 primitives=primitives,
             )
-            self.body.append(Residual(s, b, skip_mode=skip_mode))
+            self.body.append(Residual(s, b, c_out=c_fixed, skip_mode=skip_mode))
 
         self.upsample = CommonBlock(
             c_fixed,
@@ -182,22 +199,27 @@ class SearchArch(nn.Module):
         self.adn_one = ADN(36, skip_mode=skip_mode)
         self.adn_two = ADN(3, skip_mode=skip_mode)
 
+        self.c = nn.Conv2d(self.c_fixed * body_cells, self.c_fixed, 1, padding="same")
+        self.c2 = nn.Conv2d(self.c_fixed, self.c_fixed, 3, padding="same")
+
     def forward(self, x, alphas):
-        init = self.head(x, alphas["head"])
-        x = init
+
+        x = x.repeat(1, self.c_fixed // 3, 1, 1)
+        head_skip = x
 
         def func_body(x):
-            for cell in self.body:
-                x = cell(x, alphas["body"], alphas["skip"])
-            return x
+            concat_skips = []
+            for i in range(len(self.body)):
+                x = self.body[i](x, alphas["body"][i], alphas["skip"][i])
+                concat_skips += [x]
+            concat_skips = torch.cat(concat_skips, dim=1)
+            x = torch.nn.functional.leaky_relu(self.c(concat_skips), negative_slope=0.05)
+            return self.c2(x)
 
-        x = self.adn_one(x, func_body, init)
+        x = func_body(x) + head_skip
         x = self.pixel_up(self.upsample(x, alphas["upsample"]))
 
-        def func_tail(x):
-            return self.tail(x, alphas["tail"])
-
-        out = self.adn_two(x, func_tail, x)
+        out = x + self.tail(x, alphas["tail"])
         return out
 
     def fetch_weighted_flops_and_memory(self, alphas):
@@ -213,8 +235,8 @@ class SearchArch(nn.Module):
             flops += f
             memory += m
 
-        for cell in self.body:
-            f, m = cell.fetch_info(alphas["body"], alphas["skip"])
+        for i in range(len(self.body)):
+            f, m = self.body[i].fetch_info(alphas["body"][i], alphas["skip"][i])
             flops += f
             memory += m
 
