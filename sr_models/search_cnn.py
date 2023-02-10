@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from sr_models.search_cells import SearchArch
 import genotypes as gt
 import logging
+import random
 
 
 class SearchCNNController(nn.Module):
@@ -108,7 +109,7 @@ class SearchCNNController(nn.Module):
     def forward(self, x, temperature=1, stable=False):
         self.temp = temperature
 
-        if stable:
+        if False:
             func = self.softmax
         else:
             func = self.alphaselector
@@ -226,7 +227,7 @@ class SearchCNNController(nn.Module):
 
 class alphaSelector:
     def __init__(self, name="softmax"):
-        assert name in ["softmax", "gumbel", "hard_gumbel"]
+        assert name in ["softmax", "gumbel", "hard_gumbel", "dropout"]
         self.name = name
 
     def __call__(self, vector, temperature=1, dim=0):
@@ -239,3 +240,11 @@ class alphaSelector:
 
         if self.name == "softmax":
             return F.softmax(vector, dim)
+
+        if self.name == "dropout":
+            while True:
+                mask = torch.ones_like(vector) / vector.shape[-1] * 2
+                mask = torch.bernoulli(mask)
+                if mask.sum() > 0:
+                    v = torch.exp(vector) * mask
+                    return v / v.sum()
