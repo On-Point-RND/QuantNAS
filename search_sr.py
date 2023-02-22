@@ -185,51 +185,38 @@ def run_search(cfg, writer, logger, log_handler):
         logger.info("genotype = {}".format(genotype))
 
         # save
-        if best_score > score_val:
+        is_best = best_score > score_val
+        if is_best:
             best_score = score_val
             best_flops = best_current_flops
             best_genotype = genotype
-            with open(
-                os.path.join(cfg.env.save_path, "best_arch.gen"), "w"
-            ) as f:
-                f.write(str(genotype))
             with open(
                 os.path.join(cfg.env.save_path, f"arch_{epoch}.gen"), "w"
             ) as f:
                 f.write(str(genotype))
 
-            writer.add_scalar("search/best_val", best_score, epoch)
-            writer.add_scalar("search/best_flops", best_flops, epoch)
+        with open(
+            os.path.join(cfg.env.save_path, "best_arch.gen"), "w"
+        ) as f:
+            f.write(str(genotype))
 
-            is_best = True
+        utils.save_checkpoint(model, cfg.env.save_path, is_best)
+        writer.add_scalar("search/best_val", best_score, epoch)
+        writer.add_scalar("search/best_flops", best_flops, epoch)
 
-            log_genotype(
-                best_genotype,
-                cfg,
-                epoch,
-                cur_step,
-                writer,
-                best_flops,
-                best_score,
-                best=True,
-            )
+        log_genotype(
+            genotype,
+            cfg,
+            epoch,
+            cur_step,
+            writer,
+            best_current_flops,
+            score_val,
+            best=is_best,
+        )
 
-            utils.save_checkpoint(model, cfg.env.save_path, is_best)
-            print("")
-        else:
-            log_genotype(
-                genotype,
-                cfg,
-                epoch,
-                cur_step,
-                writer,
-                best_current_flops,
-                score_val,
-                best=False,
-            )
-        print("best current", best_current_flops)
         writer.add_scalars(
-            "loss/search", {"val": best_score, "train": score_train}, epoch
+            "loss/search", {"val": score_val, "train": score_train}, epoch
         )
         writer.add_scalar("search/train/temperature", temperature, epoch)
         writer.add_scalar("search/train/entropy_coef", criterion.weight1 * criterion.weight2 * criterion.coef, epoch)
