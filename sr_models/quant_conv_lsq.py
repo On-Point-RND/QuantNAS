@@ -168,8 +168,10 @@ class QuantConv(nn.Conv2d):
             * self.kernel[1]
             / self.groups
         )  # * 1e-6  # stil unsure why we use 1e-6
-        self.register_buffer("flops", torch.tensor(0, dtype=torch.float))
-        self.register_buffer("memory_size", torch.tensor(0, dtype=torch.float))
+        self.flops = 0
+        self.memory_size = 0
+        # self.register_buffer("flops", torch.tensor(0, dtype=torch.float))
+        # self.register_buffer("memory_size", torch.tensor(0, dtype=torch.float))
 
     def to_tuple(self, value):
         if type(value) == int:
@@ -191,35 +193,13 @@ class QuantConv(nn.Conv2d):
 
         c_in, w_in, h_in = input_x.shape[1], input_x.shape[2], input_x.shape[3]
 
-        tmp = torch.tensor(c_in * w_in * h_in, dtype=torch.float).to(device)
-        self.memory_size.copy_(tmp)
-        tmp = torch.tensor(
-            self.param_size * w_out * h_out, dtype=torch.float
-        ).to(device)
-        self.flops.copy_(tmp)
-        del tmp
+        self.memory_size = c_in * w_in * h_in
+        self.flops = self.param_size * w_out * h_out
 
         return output
 
-    # def compute_out(self, input_size, spatial="w"):
-
-    #     if spatial == "w":
-    #         idx = 0
-    #     if spatial == "h":
-    #         idx = 1
-    #     return int(
-    #         (
-    #             input_size
-    #             + 2 * self.padding[idx]
-    #             - self.dilation[idx] * (self.kernel[idx] - 1)
-    #             - 1
-    #         )
-    #         / self.stride[idx]
-    #         + 1
-    #     )
-
     def _fetch_info(self):
-        return self.flops.item(), self.memory_size.item()
+        return self.flops, self.memory_size
 
 
 # USE Instead of CNN + ReLU Block for final quantized model

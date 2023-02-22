@@ -41,7 +41,7 @@ class SearchCNNController(nn.Module):
         # initialize architect parameters: alphass
         self.n_ops = len(self.primitives)
 
-        self.alphas_names = ["head", "body", "skip", "upsample", "tail"]
+        self.alphas_names = ["body", "skip", "upsample", "tail"]
 
         self.alphas = dict()
         for name in self.alphas_names:
@@ -109,7 +109,7 @@ class SearchCNNController(nn.Module):
     def forward(self, x, temperature=1, stable=False):
         self.temp = temperature
 
-        if False:
+        if stable:
             func = self.softmax
         else:
             func = self.alphaselector

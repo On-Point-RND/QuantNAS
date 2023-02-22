@@ -92,7 +92,7 @@ def run_search(cfg, writer, logger, log_handler):
     model = model.to(device)
     logger.info(model)
 
-    flops_loss = FlopsLoss(model.n_ops)
+    flops_loss = FlopsLoss()
 
     # weights optimizer
     if cfg.search.optimizer == "sgd":
@@ -310,9 +310,8 @@ def train(
         alpha_optim.zero_grad()
 
         if epoch >= cfg.search.warm_up:
-            stable = False
 
-            preds, (flops, mem) = model(val_X, temperature)
+            preds, (flops, mem) = model(val_X, temperature, stable=False)
             loss = criterion(preds, val_y, epoch) + flops_loss(flops)
             loss.backward()
 
@@ -325,7 +324,7 @@ def train(
         preds, (flops, mem) = model(trn_X, temperature, stable=False)
 
         loss_w, init_loss = criterion(preds, trn_y, epoch, get_initial=True)
-        loss_w.backward()
+        init_loss.backward()
 
         if step == len(train_loader) - 1:
             log_weigths_hist(model, writer, epoch, False)
@@ -487,19 +486,17 @@ def get_data_loaders(cfg):
 
 
 class FlopsLoss:
-    def __init__(self, n_ops, reduce=4):
-        self.n_ops = n_ops / reduce
+    def __init__(self):
         self.norm = 0
 
     def set_norm(self, norm):
-        self.norm = norm.detach() * self.n_ops
-        self.min = norm.detach() / self.n_ops
+        self.norm = norm.detach() 
 
     def set_penalty(self, penalty):
         self.penalty = float(penalty)
 
     def __call__(self, weighted_flops):
-        l = (weighted_flops - self.min) / (self.norm - self.min)
+        l = weighted_flops / self.norm
         return l * self.penalty
 
 
@@ -593,7 +590,7 @@ def grad_norm(model, tb_logger, epoch):
     # norms["head"] = []
     norms["tail"] = []
     for name, p in model.named_parameters():
-        if ("body" in name) or ("head" in name) or ("tail" in name):
+        if ("body" in name) or ("tail" in name):
             if p.grad is not None:
                 param_norm = p.grad.detach().data.norm(1)
                 if "body" in name:
@@ -615,14 +612,13 @@ def grad_norm(model, tb_logger, epoch):
         for op in module._ops:
             grad_op = []
             for p in op.parameters():
-                grad_op += [p.grad.detach().data.norm(1).item()]
+                grad_op += [p.grad.detach().data.norm(1).item() if p.grad is not None else 0]
             grad_op = np.mean(grad_op)
             grad_ops += [grad_op]
         return grad_ops, np.mean([op for op in grad_ops if not op is None])
 
     net = model.net
     blocks = {
-        # "head": net.head,
         "upsample": net.upsample,
         "tail": net.tail,
     }

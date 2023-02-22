@@ -56,9 +56,9 @@ class AugmentCNN(nn.Module):
         super().__init__()
         self.skip_mode = skip_mode
         self.c_fixed = c_fixed
-        self.head = gt.to_dag_sr(
-            self.c_fixed, genotype.head, gene_type="head", c_in=c_in
-        )
+        # self.head = gt.to_dag_sr(
+        #     self.c_fixed, genotype.head, gene_type="head", c_in=c_in
+        # )
 
         self.body = nn.ModuleList()
         for i in range(blocks):

@@ -12,7 +12,7 @@ arch:
   c_fixed: 48 # channels 
   scale: 4
   arch_pattern: # the number of blocks of different types
-      head: 1
+      # head: 1
       skip: 3
       tail: 1
       body: 4

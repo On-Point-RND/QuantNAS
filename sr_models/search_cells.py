@@ -54,7 +54,7 @@ class CommonBlock(nn.Module):
         c_init,
         bits,
         num_layers,
-        gene_type="head",
+        gene_type="tail",
         scale=4,
         quant_noise=False,
         primitives=None,
@@ -72,9 +72,9 @@ class CommonBlock(nn.Module):
                 c_out,
             ) = (c_fixed, c_fixed)
 
-            if i == 0 and gene_type == "head":
-                c_in = c_init
-            elif gene_type == "tail":
+            # if i == 0 and gene_type == "head":
+            #     c_in = c_init
+            if gene_type == "tail":
                 c_out = c_init
                 c_in = c_init
             elif gene_type == "upsample":
@@ -143,15 +143,15 @@ class SearchArch(nn.Module):
         self.skip_mode = skip_mode
         self.primitives = primitives
         # Generate searchable network with shared weights
-        self.head = CommonBlock(
-            c_fixed,
-            c_init,
-            bits,
-            arch_pattern["head"],
-            gene_type="head",
-            quant_noise=quant_noise,
-            primitives=primitives,
-        )
+        # self.head = CommonBlock(
+        #     c_fixed,
+        #     c_init,
+        #     bits,
+        #     arch_pattern["head"],
+        #     gene_type="head",
+        #     quant_noise=quant_noise,
+        #     primitives=primitives,
+        # )
 
         self.body = nn.ModuleList()
         for _ in range(body_cells):
@@ -226,7 +226,7 @@ class SearchArch(nn.Module):
         flops = 0
         memory = 0
         for func, name in [
-            (self.head, "head"),
+            # (self.head, "head"),
             (self.tail, "tail"),
             (self.upsample, "upsample"),
         ]:

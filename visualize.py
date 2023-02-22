@@ -34,7 +34,7 @@ def plot_sr(genotype, file_path, caption=None):
     # input nodes
     g.node("Input", fillcolor="chartreuse1")
 
-    parts = ["head", "body", "upsample", "tail"]
+    parts = ["body", "upsample", "tail"]
 
     node_n = 0
     for name in parts:

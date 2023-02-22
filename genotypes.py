@@ -6,7 +6,7 @@ from collections import namedtuple
 from sr_models import quant_ops as ops_sr
 from sr_models.RFDN.block import ESA
 
-Genotype_SR = namedtuple("Genotype_SR", "head body tail skip upsample")
+Genotype_SR = namedtuple("Genotype_SR", "body tail skip upsample")
 
 
 body = [
@@ -24,16 +24,16 @@ body = [
     "simple_5x5_grouped_2",
 ]
 
-head = [
-    # "skip_connect",
-    "simple_1x1",
-    "simple_3x3",
-    "simple_5x5",
+# head = [
+#     # "skip_connect",
+#     "simple_1x1",
+#     "simple_3x3",
+#     "simple_5x5",
     
-    "growth1_1x1",
-    "growth1_3x3",
-    "growth1_5x5",
-]
+#     "growth1_1x1",
+#     "growth1_3x3",
+#     "growth1_5x5",
+# ]
 
 tail = [
     # "skip_connect",
@@ -77,7 +77,7 @@ skip = [
 ]
 
 PRIMITIVES_SR = {
-    "head": head,
+    # "head": head,
     "body": body,
     "skip": skip,
     "tail": tail,
@@ -98,9 +98,9 @@ def to_dag_sr(C_fixed, gene, gene_type, c_in=3, c_out=3, scale=4):
             C_fixed,
             C_fixed,
         )
-        if i == 0 and gene_type == "head":
-            C_in = c_in
-        elif gene_type == "tail":
+        # if i == 0 and gene_type == "head":
+        #     C_in = c_in
+        if gene_type == "tail":
             C_in = c_in
             C_out = c_in
         elif gene_type == "upsample":
