@@ -135,7 +135,7 @@ if __name__ == "__main__":
     os.makedirs(save_dir, exist_ok=True)
     channels = 3
     repeat_factor = 16
-    device = 1
+    device = 2
 
     with open(genotype_path, "r") as f:
         genotype = from_str(f.read())
@@ -159,3 +159,7 @@ if __name__ == "__main__":
     # dataset_loop(valid_cfg, model, logger, save_dir, device)
     print(model)
     logger.info(count_Flops(model))
+    random_image = torch.randn(1, 3, 256, 256).cuda(device)
+    _ = model(random_image)
+    flops_256, _ = model.fetch_info()
+    print(flops_256)

@@ -431,6 +431,7 @@ class SimpleConv(BaseConv):
         affine=False,
         shared=False,
         quant_noise=False,
+        padding="same"
     ):
         super().__init__(shared=shared, quant_noise=quant_noise)
         self.net = nn.Sequential(
@@ -441,7 +442,7 @@ class SimpleConv(BaseConv):
                 bits=bits,
                 kernel_size=kernel_size,
                 stride=stride,
-                padding="same",
+                padding=padding,
                 dilation=dilation,
                 groups=groups,
                 bias=affine,

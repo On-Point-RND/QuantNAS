@@ -5,7 +5,7 @@ import genotypes as gt
 from sr_models.quant_conv_lsq import QAConv2d
 from sr_models.ADN import AdaptiveNormalization as ADN
 from sr_models.RFDN.block import ESA
-
+from .quant_ops import OPS
 
 def summer(values, increments):
     return (v + i for v, i in zip(values, increments))
@@ -15,11 +15,11 @@ class Residual(nn.Module):
     def __init__(self, skip, body, c_out, skip_mode=True):
         super().__init__()
         self.skip = skip
-        self.cum_channels = nn.Conv2d((c_out // 2) * (len(body)), c_out, 1) 
+        self.cum_channels = OPS["simple_1x1"]((c_out // 2) * (len(body)), c_out, [8], None, 1, False, shared=False, quant_noise=False) 
         self.body = body
         self.skip_mode = skip_mode
 
-        self.esa = ESA(c_out)
+        self.esa = ESA(c_out, [8], shared=False)
 
     def forward(self, x):
         def func(x):
@@ -83,8 +83,8 @@ class AugmentCNN(nn.Module):
 
         self.adn_one = ADN(36, skip_mode=skip_mode)
         self.adn_two = ADN(3, skip_mode=skip_mode)
-        self.c = nn.Conv2d(self.c_fixed * blocks, self.c_fixed, 1, padding="same")
-        self.c2 = nn.Conv2d(self.c_fixed, self.c_fixed, 3, padding="same")
+        self.c = OPS["simple_1x1"](self.c_fixed * blocks, self.c_fixed, [8], self.c_fixed, 1, False, shared=False, quant_noise=False)
+        self.c2 = OPS["simple_3x3"](self.c_fixed, self.c_fixed, [8], self.c_fixed, 1, False, shared=False, quant_noise=False)
 
     def forward(self, x):
 
@@ -97,7 +97,7 @@ class AugmentCNN(nn.Module):
                 x = cell(x)
                 concat_skips += [x]
             concat_skips = torch.cat(concat_skips, dim=1)
-            x = torch.nn.functional.leaky_relu(self.c(concat_skips), negative_slope=0.05)
+            x = self.c(concat_skips)
             return self.c2(x)
 
         x = self.upsample(func(x) + head_skip) 

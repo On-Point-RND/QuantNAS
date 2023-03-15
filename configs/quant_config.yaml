@@ -7,7 +7,7 @@ dataset:
   debug_mode: False # run on a small porion of data
   
 arch:
-  bits: [32] #bitwidth options  
+  bits: [8] #bitwidth options  
   channels: 3 # input channels
   c_fixed: 48 # channels 
   scale: 4
@@ -27,7 +27,7 @@ arch:
     # upsample: ["simple_5x5_grouped_3",simple_3x3_grouped_3, "simple_3x3", "simple_5x5"]
 
 env:
-  run_name: 'SF_repeatHead_tailSkip' # name of the experiment. Ignored when 'batch_exp.py' is used.
+  run_name: 'SF_QUANT_ESA' # name of the experiment. Ignored when 'batch_exp.py' is used.
   gpu: 0 # Device. Ignored when 'batch_exp.py' is used.
   log_dir: /home/dev/data_main/LOGS/SR/11_2022/The_best_i_can/ # Directory for experiments output.
   im_dir: 'arch_images' # Subfolder of the experiment in which images of architectures are saved.
@@ -42,7 +42,7 @@ search:
   load_path: #/home/dev/data_main/LOGS/QUANT/SEARCH_PRETRAIN_V2-2021-12-10-17/best.pth.tar
   
   penalty: 0.0 # Flops penalty. Ignored when 'batch_exp.py' is used.
-  alpha_selector: dropout # Alpha transformation. 'softmax' recommended. 
+  alpha_selector: softmax # Alpha transformation. 'softmax' recommended. 
   sparse_type: entropy # Sparsity penalty. Available options: 'l1_softmax', 'l1', 'entropy', 'none'.
   sparse_coef: 1e-3 #1e-4 # Coefficient. Recommend: 0.001 for entropy, 0.0001 for l1.
   optimizer: adam # Weights optimizer. Options: 'sgd', 'adam'

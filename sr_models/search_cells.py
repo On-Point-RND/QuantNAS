@@ -4,6 +4,7 @@ import torch
 from sr_models import quant_ops as ops
 from sr_models.ADN import AdaptiveNormalization as ADN
 from sr_models.RFDN.block import ESA
+from .quant_ops import OPS
 
 
 def summer(values, increments):
@@ -14,9 +15,9 @@ class Residual(nn.Module):
     def __init__(self, skip, body, c_out, skip_mode=True):
         super(Residual, self).__init__()
         self.skip = skip
-        self.cum_channels = nn.Conv2d((c_out // 2) * (len(body.net)), c_out, 1)
+        self.cum_channels = OPS["simple_1x1"]((c_out // 2) * (len(body.net)), c_out, [8], None, 1, False, shared=True, quant_noise=False) 
         self.body = body
-        self.esa = ESA(c_out)
+        self.esa = ESA(c_out, [8], shared=True)
 
     def forward(self, x, b_weights, s_weights):
         def func(x):
@@ -199,8 +200,8 @@ class SearchArch(nn.Module):
         self.adn_one = ADN(36, skip_mode=skip_mode)
         self.adn_two = ADN(3, skip_mode=skip_mode)
 
-        self.c = nn.Conv2d(self.c_fixed * body_cells, self.c_fixed, 1, padding="same")
-        self.c2 = nn.Conv2d(self.c_fixed, self.c_fixed, 3, padding="same")
+        self.c = OPS["simple_1x1"](self.c_fixed * body_cells, self.c_fixed, [8], self.c_fixed, 1, False, shared=True, quant_noise=False) 
+        self.c2 = OPS["simple_3x3"](self.c_fixed, self.c_fixed, [8], self.c_fixed, 1, False, shared=True, quant_noise=False) 
 
     def forward(self, x, alphas):
 
@@ -213,7 +214,7 @@ class SearchArch(nn.Module):
                 x = self.body[i](x, alphas["body"][i], alphas["skip"][i])
                 concat_skips += [x]
             concat_skips = torch.cat(concat_skips, dim=1)
-            x = torch.nn.functional.leaky_relu(self.c(concat_skips), negative_slope=0.05)
+            x = self.c(concat_skips)
             return self.c2(x)
 
         x = func_body(x) + head_skip
