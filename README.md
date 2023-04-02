@@ -1,3 +1,8 @@
+A repository for the papaer: https://arxiv.org/abs/2208.14839
+
+## QuantNAS for super resolution: searching for efficient quantization-friendly architectures against quantization noise
+
+
 ### Full precision NAS VS Joint quantization:
 To search with different bit widths set desired bit widths in "configs/quant_config.yaml" <br>
 <br>
