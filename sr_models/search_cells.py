@@ -10,20 +10,24 @@ from .quant_ops import OPS
 def summer(values, increments):
     return (v + i for v, i in zip(values, increments))
 
+SUPPORT_CONV_BIT = 8
 
 class Residual(nn.Module):
     def __init__(self, skip, body, c_out, skip_mode=True):
         super(Residual, self).__init__()
         self.skip = skip
-        self.cum_channels = OPS["simple_1x1"]((c_out // 2) * (len(body.net)), c_out, [8], None, 1, False, shared=True, quant_noise=False) 
+        self.cum_channels = OPS["simple_1x1"]((c_out // 2) * (len(body.net)), c_out, [SUPPORT_CONV_BIT], None, 1, False, shared=True, quant_noise=False) 
         self.body = body
-        self.esa = ESA(c_out, [8], shared=True)
+        self.esa = ESA(c_out, [SUPPORT_CONV_BIT], shared=True)
 
     def forward(self, x, b_weights, s_weights):
         def func(x):
-            return self.body_split(x, b_weights, s_weights) 
-
-        return self.esa(func(x)) 
+            return self.body_split(x, b_weights, s_weights)
+        a = func(x) 
+        print("Before ESA", a.abs().max().item(), a.max().item() - a.min().item())
+        a = self.esa(a)
+        print("After ESA", a.abs().max().item(), a.max().item() - a.min().item())
+        return a # self.esa(func(x)) 
 
     def body_split(self, x, b_alphas, s_alphas):
         splits = []
@@ -34,7 +38,11 @@ class Residual(nn.Module):
             else:
                 x = self.body.net[i](x, b_alphas[i]) 
         splits += [x]
-        output = self.cum_channels(torch.cat(splits, dim=1))
+        a = torch.cat(splits, dim=1)
+        print("Before cum_channels", a.abs().max().item(), a.max().item() - a.min().item())
+        output = self.cum_channels(a) #torch.cat(splits, dim=1))
+        a = output
+        print("After cum_channels", a.abs().max().item(), a.max().item() - a.min().item())
         return output
 
     def fetch_info(self, b_weights, s_weights):
@@ -200,8 +208,8 @@ class SearchArch(nn.Module):
         self.adn_one = ADN(36, skip_mode=skip_mode)
         self.adn_two = ADN(3, skip_mode=skip_mode)
 
-        self.c = OPS["simple_1x1"](self.c_fixed * body_cells, self.c_fixed, [8], self.c_fixed, 1, False, shared=True, quant_noise=False) 
-        self.c2 = OPS["simple_3x3"](self.c_fixed, self.c_fixed, [8], self.c_fixed, 1, False, shared=True, quant_noise=False) 
+        self.c = OPS["simple_1x1"](self.c_fixed * body_cells, self.c_fixed, [SUPPORT_CONV_BIT], self.c_fixed, 1, False, shared=True, quant_noise=False) 
+        self.c2 = OPS["simple_3x3"](self.c_fixed, self.c_fixed, [SUPPORT_CONV_BIT], self.c_fixed, 1, False, shared=True, quant_noise=False) 
 
     def forward(self, x, alphas):
 
@@ -216,7 +224,7 @@ class SearchArch(nn.Module):
             concat_skips = torch.cat(concat_skips, dim=1)
             x = self.c(concat_skips)
             return self.c2(x)
-
+        print("Forward")
         x = func_body(x) + head_skip
         x = self.pixel_up(self.upsample(x, alphas["upsample"]))
 

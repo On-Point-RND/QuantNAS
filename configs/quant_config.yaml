@@ -7,7 +7,7 @@ dataset:
   debug_mode: False # run on a small porion of data
   
 arch:
-  bits: [8] #bitwidth options  
+  bits: [4, 8] #bitwidth options  
   channels: 3 # input channels
   c_fixed: 48 # channels 
   scale: 4
@@ -29,7 +29,7 @@ arch:
 env:
   run_name: 'SF_QUANT_ESA' # name of the experiment. Ignored when 'batch_exp.py' is used.
   gpu: 0 # Device. Ignored when 'batch_exp.py' is used.
-  log_dir: /home/dev/data_main/LOGS/SR/11_2022/The_best_i_can/ # Directory for experiments output.
+  log_dir: /home/dev/MidasLogs/The_best_i_can/ # Directory for experiments output.
   im_dir: 'arch_images' # Subfolder of the experiment in which images of architectures are saved.
   workers: 4 
   seed : 777 

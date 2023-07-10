@@ -10,16 +10,17 @@ from .quant_ops import OPS
 def summer(values, increments):
     return (v + i for v, i in zip(values, increments))
 
+SUPPORT_CONV_BIT = 8
 
 class Residual(nn.Module):
     def __init__(self, skip, body, c_out, skip_mode=True):
         super().__init__()
         self.skip = skip
-        self.cum_channels = OPS["simple_1x1"]((c_out // 2) * (len(body)), c_out, [8], None, 1, False, shared=False, quant_noise=False) 
+        self.cum_channels = OPS["simple_1x1"]((c_out // 2) * (len(body)), c_out, [SUPPORT_CONV_BIT], None, 1, False, shared=False, quant_noise=False) 
         self.body = body
         self.skip_mode = skip_mode
 
-        self.esa = ESA(c_out, [8], shared=False)
+        self.esa = ESA(c_out, [SUPPORT_CONV_BIT], shared=False)
 
     def forward(self, x):
         def func(x):
@@ -83,8 +84,8 @@ class AugmentCNN(nn.Module):
 
         self.adn_one = ADN(36, skip_mode=skip_mode)
         self.adn_two = ADN(3, skip_mode=skip_mode)
-        self.c = OPS["simple_1x1"](self.c_fixed * blocks, self.c_fixed, [8], self.c_fixed, 1, False, shared=False, quant_noise=False)
-        self.c2 = OPS["simple_3x3"](self.c_fixed, self.c_fixed, [8], self.c_fixed, 1, False, shared=False, quant_noise=False)
+        self.c = OPS["simple_1x1"](self.c_fixed * blocks, self.c_fixed, [SUPPORT_CONV_BIT], self.c_fixed, 1, False, shared=False, quant_noise=False)
+        self.c2 = OPS["simple_3x3"](self.c_fixed, self.c_fixed, [SUPPORT_CONV_BIT], self.c_fixed, 1, False, shared=False, quant_noise=False)
 
     def forward(self, x):
 

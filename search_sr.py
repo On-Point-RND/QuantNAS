@@ -327,7 +327,7 @@ def train(
         init_loss.backward()
 
         if step == len(train_loader) - 1:
-            log_weigths_hist(model, writer, epoch, False)
+            # log_weigths_hist(model, writer, epoch, False)
             grad_norm(model, writer, epoch)
 
         # gradient clipping
@@ -510,6 +510,8 @@ class SparseCrit(nn.Module):
         self.epochs = epochs
         self.type = type
         self.warm_up = warm_up
+        self.weight1 = 0
+        self.weight2 = 0
 
     def init_alpha(self, alphas):
         self.alphas = alphas
