@@ -291,6 +291,8 @@ def train(
     for step, ((trn_X, trn_y, _, _), (val_X, val_y, _, _)) in enumerate(
         zip(train_loader, train_alpha_loader)
     ):
+        if step == 10:
+            os.system("nvidia-smi")
 
         trn_X, trn_y = (
             trn_X.to(device, non_blocking=True),
