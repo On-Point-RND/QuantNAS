@@ -18,16 +18,12 @@ class Residual(nn.Module):
         self.skip = skip
         self.cum_channels = OPS["simple_1x1"]((c_out // 2) * (len(body.net)), c_out, [SUPPORT_CONV_BIT], None, 1, False, shared=True, quant_noise=False) 
         self.body = body
-        self.esa = ESA(c_out, [SUPPORT_CONV_BIT], shared=True)
+        self.adn = ADN(c_out, skip_mode=skip_mode)
 
     def forward(self, x, b_weights, s_weights):
         def func(x):
             return self.body_split(x, b_weights, s_weights)
-        a = func(x) 
-        print("Before ESA", a.abs().max().item(), a.max().item() - a.min().item())
-        a = self.esa(a)
-        print("After ESA", a.abs().max().item(), a.max().item() - a.min().item())
-        return a # self.esa(func(x)) 
+        return self.adn(x, func, x) 
 
     def body_split(self, x, b_alphas, s_alphas):
         splits = []
@@ -38,11 +34,7 @@ class Residual(nn.Module):
             else:
                 x = self.body.net[i](x, b_alphas[i]) 
         splits += [x]
-        a = torch.cat(splits, dim=1)
-        print("Before cum_channels", a.abs().max().item(), a.max().item() - a.min().item())
-        output = self.cum_channels(a) #torch.cat(splits, dim=1))
-        a = output
-        print("After cum_channels", a.abs().max().item(), a.max().item() - a.min().item())
+        output = self.cum_channels(torch.cat(splits, dim=1))
         return output
 
     def fetch_info(self, b_weights, s_weights):
@@ -224,7 +216,6 @@ class SearchArch(nn.Module):
             concat_skips = torch.cat(concat_skips, dim=1)
             x = self.c(concat_skips)
             return self.c2(x)
-        print("Forward")
         x = func_body(x) + head_skip
         x = self.pixel_up(self.upsample(x, alphas["upsample"]))
 
