@@ -1,7 +1,7 @@
 dataset:
   scale: 4
   search_subsample: 0.7 # Search is too slow. search is too slow. Therefore we use only part of the data.
-  batch_size: 64
+  batch_size: 50
   crop_size: 45 # small image,  40x4=160, pathces are 200x200
   files_list:  /home/dev/data_main/SR/DIV2K/processed_200_st70/HR
   debug_mode: False # run on a small porion of data
