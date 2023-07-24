@@ -18,14 +18,14 @@ class Residual(nn.Module):
         self.skip = skip
         self.cum_channels = OPS["simple_1x1"]((c_out // 2) * (len(body.net)), c_out, [SUPPORT_CONV_BIT], None, 1, False, shared=True, quant_noise=False) 
         self.body = body
-        self.adn = ADN(c_out, skip_mode=skip_mode)
+        # self.adn = ADN(c_out, skip_mode=skip_mode)
         self.esa = ESA(c_out, [8], shared=True)
 
     def forward(self, x, b_weights, s_weights):
         def func(x):
             return self.esa(self.body_split(x, b_weights, s_weights))
 
-        return self.adn(x, func, x) 
+        return func(x) #self.adn(x, func, x) 
 
     def body_split(self, x, b_alphas, s_alphas):
         splits = []
