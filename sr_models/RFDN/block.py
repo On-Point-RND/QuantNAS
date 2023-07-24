@@ -104,24 +104,31 @@ def sequential(*args):
 class ESA(nn.Module):
     def __init__(self, n_feats, bits, shared):
         super(ESA, self).__init__()
-        # conv = nn.Conv2d
+        conv = nn.Conv2d
         f = n_feats // 4
-        self.conv1 = SimpleConv(n_feats, f, bits, None, 1, 1, shared=shared)
-        self.conv_f = SimpleConv(f, f, bits, None, 1, 1, shared=shared) 
-        self.conv_max = SimpleConv(f, f, bits, None, 3, 1, shared=shared, padding=1)
-        self.conv2 = SimpleConv(f, f, bits, None, 3, stride=2, shared=shared, padding=0)
-        self.conv3 = SimpleConv(f, f, bits, None, 3, stride=1, shared=shared, padding=1) 
-        self.conv3_ = SimpleConv(f, f, bits, None, 3, stride=1, shared=shared, padding=1) 
-        self.conv4 = SimpleConv(f, n_feats, bits, None, 1, stride=1, shared=shared) 
+        self.conv1 = conv(n_feats, f, kernel_size=1)
+        self.conv_f = conv(f, f, kernel_size=1)
+        self.conv_max = conv(f, f, kernel_size=3, padding=1)
+        self.conv2 = conv(f, f, kernel_size=3, stride=2, padding=0)
+        self.conv3 = conv(f, f, kernel_size=3, padding=1)
+        self.conv3_ = conv(f, f, kernel_size=3, padding=1)
+        self.conv4 = conv(f, n_feats, kernel_size=1)
+        # self.conv1 = SimpleConv(n_feats, f, bits, None, 1, 1, shared=shared)
+        # self.conv_f = SimpleConv(f, f, bits, None, 1, 1, shared=shared) 
+        # self.conv_max = SimpleConv(f, f, bits, None, 3, 1, shared=shared, padding=1)
+        # self.conv2 = SimpleConv(f, f, bits, None, 3, stride=2, shared=shared, padding=0)
+        # self.conv3 = SimpleConv(f, f, bits, None, 3, stride=1, shared=shared, padding=1) 
+        # self.conv3_ = SimpleConv(f, f, bits, None, 3, stride=1, shared=shared, padding=1) 
+        # self.conv4 = SimpleConv(f, n_feats, bits, None, 1, stride=1, shared=shared) 
         self.sigmoid = nn.Sigmoid()
-        # self.relu = nn.ReLU(inplace=True)
+        self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x):
         c1_ = (self.conv1(x))
         c1 = self.conv2(c1_)
         v_max = F.max_pool2d(c1, kernel_size=7, stride=3)
-        v_range = self.conv_max(v_max)
-        c3 = self.conv3(v_range)
+        v_range = self.relu(self.conv_max(v_max))
+        c3 = self.relu(self.conv3(v_range))
         c3 = self.conv3_(c3)
         c3 = F.interpolate(c3, (x.size(2), x.size(3)), mode='bilinear', align_corners=False) 
         cf = self.conv_f(c1_)
