@@ -20,11 +20,11 @@ class Residual(nn.Module):
         self.body = body
         self.skip_mode = skip_mode
         self.adn = ADN(c_out, skip_mode=skip_mode)
-        self.esa = ESA(c_out, [8], shared=False)
+        # self.esa = ESA(c_out, [8], shared=False)
 
     def forward(self, x):
         def func(x):
-            return self.esa(self.body_split(x))
+            return self.body_split(x)
 
         return self.adn(x, func, x) 
 
