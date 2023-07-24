@@ -6,6 +6,7 @@ from sr_models.search_cells import SearchArch
 import genotypes as gt
 import logging
 import random
+from torch.utils.tensorboard import SummaryWriter
 
 
 class SearchCNNController(nn.Module):
@@ -126,7 +127,8 @@ class SearchCNNController(nn.Module):
         weight_alphass = self.get_alphas(self.get_max)
         return self.net(x, weight_alphass)
 
-    def print_alphas(self, logger, temperature, writer, epoch):
+    def print_alphas(self, logger, temperature, writer_, epoch):
+        writer = SummaryWriter(log_dir=writer_.log_dir)
         # remove formats
         org_formatters = []
         for handler in logger.handlers:
@@ -172,6 +174,7 @@ class SearchCNNController(nn.Module):
         # restore formats
         for handler, formatter in zip(logger.handlers, org_formatters):
             handler.setFormatter(formatter)
+        writer.close()
 
     def genotype(self):
         gene = dict()

@@ -249,19 +249,19 @@ def log_genotype(
             PIL.Image.ANTIALIAS,
         )
     )
-    writer.add_image(
-        tag=f"SR_im_normal_best_{best}",
-        img_tensor=im_normal,
-        dataformats="HWC",
-        global_step=cur_step,
-    )
+    # writer.add_image(
+    #     tag=f"SR_im_normal_best_{best}",
+    #     img_tensor=im_normal,
+    #     dataformats="HWC",
+    #     global_step=cur_step,
+    # )
 
-    writer.add_image(
-        tag=f"SR_im_normal_CURRENT",
-        img_tensor=im_normal,
-        dataformats="HWC",
-        global_step=cur_step,
-    )
+    # writer.add_image(
+    #     tag=f"SR_im_normal_CURRENT",
+    #     img_tensor=im_normal,
+    #     dataformats="HWC",
+    #     global_step=cur_step,
+    # )
 
 
 def train(
@@ -317,8 +317,8 @@ def train(
             loss = criterion(preds, val_y, epoch) + flops_loss(flops)
             loss.backward()
 
-            if step == len(train_loader) - 1:
-                log_weigths_hist(model, writer, epoch, True)
+            # if step == len(train_loader) - 1:
+            #     log_weigths_hist(model, writer, epoch, True)
             alpha_optim.step()
 
         # phase 1. child network step (w)
