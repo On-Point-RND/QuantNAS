@@ -1,7 +1,7 @@
 dataset:
   scale: 4
   search_subsample: 0.7 # Search is too slow. search is too slow. Therefore we use only part of the data.
-  batch_size: 50
+  batch_size: 32
   crop_size: 45 # small image,  40x4=160, pathces are 200x200
   files_list:  /home/dev/data_main/SR/DIV2K/processed_200_st70/HR
   debug_mode: False # run on a small porion of data
@@ -19,19 +19,13 @@ arch:
       upsample: 1
   body_cells: 4  # body consists of several repetitions of identical blocks
   skip_mode: False # If False -> use ADM
-  # primitives:
-    # head: ["simple_3x3", "simple_5x5", "simple_3x3_grouped_3", "simple_5x5_grouped_3"]
-    # body: ["conv_5x1_1x5", "conv_3x1_1x3", "simple_3x3", "simple_5x5"]
-    # skip: ["simple_1x1", "simple_3x3", "simple_5x5"]
-    # tail: ["simple_1x1", "simple_3x3", "simple_5x5","simple_5x5_grouped_3","simple_3x3_grouped_3"]
-    # upsample: ["simple_5x5_grouped_3",simple_3x3_grouped_3, "simple_3x3", "simple_5x5"]
 
 env:
   run_name: 'SF_QUANT_ESA' # name of the experiment. Ignored when 'batch_exp.py' is used.
   gpu: 0 # Device. Ignored when 'batch_exp.py' is used.
   log_dir: /home/dev/MidasLogs/The_best_i_can/ # Directory for experiments output.
   im_dir: 'arch_images' # Subfolder of the experiment in which images of architectures are saved.
-  workers: 4 
+  workers: 2
   seed : 777 
   print_freq: 60 # print frequency
  
