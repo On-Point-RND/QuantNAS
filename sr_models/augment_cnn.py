@@ -16,17 +16,17 @@ class Residual(nn.Module):
     def __init__(self, skip, body, c_out, skip_mode=True):
         super().__init__()
         self.skip = skip
-        self.cum_channels = nn.Conv2d((c_out // 2) * (len(body)), c_out, 1) #OPS["simple_1x1"]((c_out // 2) * (len(body)), c_out, [SUPPORT_CONV_BIT], None, 1, False, shared=False, quant_noise=False) 
+        self.cum_channels = OPS["simple_1x1"]((c_out // 2) * (len(body)), c_out, [SUPPORT_CONV_BIT], None, 1, False, shared=False, quant_noise=False) 
         self.body = body
         self.skip_mode = skip_mode
-        self.adn = ADN(c_out, skip_mode=skip_mode)
-        # self.esa = ESA(c_out, [8], shared=False)
+        # self.adn = ADN(c_out, skip_mode=skip_mode)
+        self.esa = ESA(c_out, [8], shared=False)
 
     def forward(self, x):
         def func(x):
             return self.body_split(x)
 
-        return self.adn(x, func, x) 
+        return self.esa(func(x)) #self.adn(x, func, x) 
 
     def body_split(self, x):
         splits = []
@@ -82,12 +82,10 @@ class AugmentCNN(nn.Module):
         )
         self.quant_mode = True
 
-        self.adn_one = ADN(36, skip_mode=skip_mode)
-        self.adn_two = ADN(3, skip_mode=skip_mode)
-        self.c = nn.Conv2d(self.c_fixed * blocks, self.c_fixed, 1, padding="same")
-        self.c2 = nn.Conv2d(self.c_fixed, self.c_fixed, 3, padding="same")
-        # self.c = OPS["simple_1x1"](self.c_fixed * blocks, self.c_fixed, [SUPPORT_CONV_BIT], self.c_fixed, 1, False, shared=False, quant_noise=False)
-        # self.c2 = OPS["simple_3x3"](self.c_fixed, self.c_fixed, [SUPPORT_CONV_BIT], self.c_fixed, 1, False, shared=False, quant_noise=False)
+        # self.adn_one = ADN(36, skip_mode=skip_mode)
+        # self.adn_two = ADN(3, skip_mode=skip_mode)
+        self.c = OPS["simple_1x1"](self.c_fixed * blocks, self.c_fixed, [SUPPORT_CONV_BIT], self.c_fixed, 1, False, shared=False, quant_noise=False)
+        self.c2 = OPS["simple_3x3"](self.c_fixed, self.c_fixed, [SUPPORT_CONV_BIT], self.c_fixed, 1, False, shared=False, quant_noise=False)
 
     def forward(self, x):
 
@@ -100,8 +98,7 @@ class AugmentCNN(nn.Module):
                 x = cell(x)
                 concat_skips += [x]
             concat_skips = torch.cat(concat_skips, dim=1)
-            x = torch.nn.functional.leaky_relu(self.c(concat_skips), negative_slope=0.05)
-            # x = self.c(concat_skips)
+            x = self.c(concat_skips)
             return self.c2(x)
 
         x = self.upsample(func(x) + head_skip) 
