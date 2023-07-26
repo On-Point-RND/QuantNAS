@@ -19,11 +19,11 @@ class Residual(nn.Module):
         self.cum_channels = nn.Conv2d((c_out // 2) * (len(body.net)), c_out, 1) #OPS["simple_1x1"]((c_out // 2) * (len(body.net)), c_out, [SUPPORT_CONV_BIT], None, 1, False, shared=True, quant_noise=False) 
         self.body = body
         self.adn = ADN(c_out, skip_mode=skip_mode)
-        self.esa = ESA(c_out, [8], shared=True)
+        # self.esa = ESA(c_out, [8], shared=True)
 
     def forward(self, x, b_weights, s_weights):
         def func(x):
-            return self.esa(self.body_split(x, b_weights, s_weights))
+            return self.body_split(x, b_weights, s_weights) 
 
         return self.adn(x, func, x) 
 
