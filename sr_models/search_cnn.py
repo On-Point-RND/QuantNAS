@@ -146,13 +146,14 @@ class SearchCNNController(nn.Module):
                 assert len(alpha_names) == len(
                     alphas.detach().cpu().numpy().tolist()
                 )
-                writer.add_scalars(
-                    f"{log_name}.{i}",
-                    dict(
-                        zip(alpha_names, alphas.detach().cpu().numpy().tolist())
-                    ),
-                    epoch,
-                )
+                if not ("alphas_orig" in log_name):
+                    writer.add_scalars(
+                        f"{log_name}.{i}",
+                        dict(
+                            zip(alpha_names, alphas.detach().cpu().numpy().tolist())
+                        ),
+                        epoch,
+                    )
 
         logger.info("####### alphas #######")
         weight_alphas = self.get_alphas(self.softmax)
