@@ -8,7 +8,7 @@
 
 #SBATCH --mail-user=d.osin@skoltech.ru
 
-#SBATCH --output=output_20.txt
+#SBATCH --output=output_22.txt
 
 #SBATCH --time=6-00
 
