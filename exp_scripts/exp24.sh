@@ -12,7 +12,7 @@
 
 #SBATCH --time=6-00
 
-#SBATCH --mem=256G
+#SBATCH --mem=200G
 
 #SBATCH --nodes=1
 
@@ -20,7 +20,7 @@
 
 #SBATCH --gpus=2
 
-srun singularity exec --bind /home/d.osin/:/home --bind /gpfs/gpfs0/d.osin/data_main:/home/dev/data_main -f --nv quantnas.sif bash -c '
+srun singularity exec --bind /gpfs/gpfs0/d.osin/:/home --bind /gpfs/gpfs0/d.osin/data_main:/home/dev/data_main -f --nv quantnas.sif bash -c '
     cd /home/QuanToaster;
     nvidia-smi;
     (sleep 60; python batch_exp.py -v 0 -d entropy_4_esa_noise -g 0 -c entropy_4_noise.yaml) &
