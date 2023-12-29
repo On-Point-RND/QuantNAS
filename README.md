@@ -1,4 +1,4 @@
-A repository for the papaer: https://arxiv.org/abs/2208.14839
+repository for the papaer: https://arxiv.org/abs/2208.14839
 
 ## QuantNAS for super resolution: searching for efficient quantization-friendly architectures against quantization noise
 
