@@ -2,6 +2,7 @@ A repository for the papaer: https://arxiv.org/abs/2208.14839
 
 ## QuantNAS for super resolution: searching for efficient quantization-friendly architectures against quantization noise
 
+To search for robust, quantization-friendly architectures we approximate model degradation caused by quantization with Quantization Noise (QN) instead of directly quantizing model weights during the search phase.  Such reparametrization allows differentiability crucial for a differentiable NAS and is up to 30% faster than quantizing weights directly.
 
 ### Full precision NAS VS Joint quantization:
 To search with different bit widths set desired bit widths in "configs/quant_config.yaml" <br>
